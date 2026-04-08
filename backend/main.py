@@ -151,6 +151,14 @@ def dashboard():
         "rmas_in_progress": sum(1 for r in rmas if r["resolution_status"] == "Pending"),
     }
 
+# --- Debug ---
+@app.get("/debug")
+def debug():
+    return {
+        "url": os.getenv("SUPABASE_URL"),
+        "key_prefix": os.getenv("SUPABASE_KEY", "")[:20]
+    }
+
 # --- Root ---
 @app.get("/")
 def root():
