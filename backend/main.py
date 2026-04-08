@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from database import supabase
+from database import db_get, db_post, db_patch, db_delete
 from pydantic import BaseModel
 from typing import Optional
-import uuid
+import os
 
 app = FastAPI(title="SupportOps API")
 
@@ -17,14 +17,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.get("/debug")
-def debug():
-    import os
-    return {
-        "url": os.getenv("SUPABASE_URL"),
-        "key": os.getenv("SUPABASE_KEY", "")[:15]
-    }
 
 # --- Models ---
 class Customer(BaseModel):
@@ -60,103 +52,115 @@ class RMA(BaseModel):
     shipping_status: Optional[str] = "Pending"
     resolution_status: Optional[str] = "Pending"
 
+# --- Debug ---
+@app.get("/debug")
+def debug():
+    return {
+        "url": os.getenv("SUPABASE_URL"),
+        "key": os.getenv("SUPABASE_KEY", "")[:15]
+    }
+
 # --- Customers ---
 @app.get("/customers")
 def get_customers():
-    return supabase.table("customers").select("*").execute().data
+    return db_get("customers", "order=created_at.desc")
 
 @app.post("/customers")
 def create_customer(c: Customer):
-    return supabase.table("customers").insert(c.dict()).execute().data
+    return db_post("customers", c.dict())
 
 @app.put("/customers/{id}")
 def update_customer(id: str, c: Customer):
-    return supabase.table("customers").update(c.dict()).eq("id", id).execute().data
+    return db_patch("customers", id, c.dict())
 
 @app.delete("/customers/{id}")
 def delete_customer(id: str):
-    return supabase.table("customers").delete().eq("id", id).execute().data
+    return db_delete("customers", id)
 
 # --- Devices ---
 @app.get("/devices")
 def get_devices():
-    return supabase.table("devices").select("*").execute().data
+    return db_get("devices", "order=created_at.desc")
 
 @app.post("/devices")
 def create_device(d: Device):
-    return supabase.table("devices").insert(d.dict()).execute().data
+    return db_post("devices", d.dict())
 
 @app.put("/devices/{id}")
 def update_device(id: str, d: Device):
-    return supabase.table("devices").update(d.dict()).eq("id", id).execute().data
+    return db_patch("devices", id, d.dict())
 
 # --- Tickets ---
 @app.get("/tickets")
 def get_tickets():
-    return supabase.table("tickets").select("*").execute().data
+    return db_get("tickets", "order=created_at.desc")
 
 @app.get("/tickets/{id}")
 def get_ticket(id: str):
-    result = supabase.table("tickets").select("*").eq("id", id).execute().data
+    result = db_get("tickets", f"id=eq.{id}")
     if not result:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return result[0]
 
 @app.post("/tickets")
 def create_ticket(t: Ticket):
-    return supabase.table("tickets").insert(t.dict()).execute().data
+    return db_post("tickets", t.dict())
 
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
     data = t.dict()
-    old = supabase.table("tickets").select("status").eq("id", id).execute().data
+    old = db_get("tickets", f"id=eq.{id}&select=status")
     if old and old[0]["status"] != data["status"]:
-        supabase.table("ticket_history").insert({
+        db_post("ticket_history", {
             "ticket_id": id,
             "old_status": old[0]["status"],
             "new_status": data["status"],
             "changed_by": "Agent"
-        }).execute()
-    return supabase.table("tickets").update(data).eq("id", id).execute().data
+        })
+    return db_patch("tickets", id, data)
 
 # --- Notes ---
 @app.get("/tickets/{id}/notes")
 def get_notes(id: str):
-    return supabase.table("ticket_notes").select("*").eq("ticket_id", id).execute().data
+    return db_get("ticket_notes", f"ticket_id=eq.{id}&order=created_at.asc")
 
 @app.post("/notes")
 def create_note(n: TicketNote):
-    return supabase.table("ticket_notes").insert(n.dict()).execute().data
+    return db_post("ticket_notes", n.dict())
 
 # --- History ---
 @app.get("/tickets/{id}/history")
 def get_history(id: str):
-    return supabase.table("ticket_history").select("*").eq("ticket_id", id).execute().data
+    return db_get("ticket_history", f"ticket_id=eq.{id}&order=changed_at.asc")
 
 # --- RMAs ---
 @app.get("/rmas")
 def get_rmas():
-    return supabase.table("rmas").select("*").execute().data
+    return db_get("rmas", "order=created_at.desc")
 
 @app.post("/rmas")
 def create_rma(r: RMA):
-    return supabase.table("rmas").insert(r.dict()).execute().data
+    return db_post("rmas", r.dict())
 
 @app.put("/rmas/{id}")
 def update_rma(id: str, r: RMA):
-    return supabase.table("rmas").update(r.dict()).eq("id", id).execute().data
+    return db_patch("rmas", id, r.dict())
 
 # --- Dashboard ---
 @app.get("/dashboard")
 def dashboard():
-    tickets = supabase.table("tickets").select("status, priority").execute().data
-    rmas = supabase.table("rmas").select("resolution_status").execute().data
+    tickets = db_get("tickets", "select=status,priority")
+    rmas = db_get("rmas", "select=resolution_status")
+    if not isinstance(tickets, list):
+        tickets = []
+    if not isinstance(rmas, list):
+        rmas = []
     return {
-        "open_tickets": sum(1 for t in tickets if t["status"] == "Open"),
-        "in_progress": sum(1 for t in tickets if t["status"] == "In Progress"),
-        "closed_tickets": sum(1 for t in tickets if t["status"] == "Closed"),
-        "critical": sum(1 for t in tickets if t["priority"] == "Critical"),
-        "rmas_in_progress": sum(1 for r in rmas if r["resolution_status"] == "Pending"),
+        "open_tickets": sum(1 for t in tickets if t.get("status") == "Open"),
+        "in_progress": sum(1 for t in tickets if t.get("status") == "In Progress"),
+        "closed_tickets": sum(1 for t in tickets if t.get("status") == "Closed"),
+        "critical": sum(1 for t in tickets if t.get("priority") == "Critical"),
+        "rmas_in_progress": sum(1 for r in rmas if r.get("resolution_status") == "Pending"),
     }
 
 # --- Root ---
