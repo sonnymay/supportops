@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000";
+const BASE = "https://supportops-4i2l.onrender.com";
 
 export const api = {
   get: (path) => fetch(`${BASE}${path}`).then(r => r.json()),
