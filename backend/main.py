@@ -18,6 +18,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/debug")
+def debug():
+    import os
+    return {
+        "url": os.getenv("SUPABASE_URL"),
+        "key": os.getenv("SUPABASE_KEY", "")[:15]
+    }
+
 # --- Models ---
 class Customer(BaseModel):
     name: str
@@ -149,14 +157,6 @@ def dashboard():
         "closed_tickets": sum(1 for t in tickets if t["status"] == "Closed"),
         "critical": sum(1 for t in tickets if t["priority"] == "Critical"),
         "rmas_in_progress": sum(1 for r in rmas if r["resolution_status"] == "Pending"),
-    }
-
-# --- Debug ---
-@app.get("/debug")
-def debug():
-    return {
-        "url": os.getenv("SUPABASE_URL"),
-        "key_prefix": os.getenv("SUPABASE_KEY", "")[:20]
     }
 
 # --- Root ---
