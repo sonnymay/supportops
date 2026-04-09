@@ -1,4 +1,4 @@
-const BASE = "https://supportops-4i2l.onrender.com";
+const BASE = "https://supportops-production-65ee.up.railway.app";
 
 export const api = {
   get: (path) => fetch(`${BASE}${path}`).then(r => r.json()),
