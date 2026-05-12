@@ -1,4 +1,8 @@
-const BASE = "https://supportops-production-65ee.up.railway.app";
+const BASE = import.meta.env.VITE_API_BASE_URL;
+
+if (!BASE) {
+  console.error("VITE_API_BASE_URL is not set. API calls will fail.");
+}
 
 export const api = {
   get: (path) => fetch(`${BASE}${path}`).then(r => r.json()),

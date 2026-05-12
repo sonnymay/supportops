@@ -1,20 +1,16 @@
 services:
   - type: web
-    name: supportops
+    name: supportops-api
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /debug
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: SUPABASE_URL
-        fromService:
-          type: web
-          name: supportops
-          envVarKey: SUPABASE_URL
+        sync: false
       - key: SUPABASE_KEY
-        fromService:
-          type: web
-          name: supportops
-          envVarKey: SUPABASE_KEY
+        sync: false
