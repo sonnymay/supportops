@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import db_get, db_post, db_patch, db_delete
 from pydantic import BaseModel
 from typing import Optional
-import os
 
 app = FastAPI(title="SupportOps API")
 
@@ -52,13 +51,10 @@ class RMA(BaseModel):
     shipping_status: Optional[str] = "Pending"
     resolution_status: Optional[str] = "Pending"
 
-# --- Debug ---
-@app.get("/debug")
-def debug():
-    return {
-        "url": os.getenv("SUPABASE_URL"),
-        "key": os.getenv("SUPABASE_KEY", "")[:15]
-    }
+# --- Health ---
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 # --- Customers ---
 @app.get("/customers")
