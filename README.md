@@ -37,7 +37,7 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 | Frontend | React 19, Vite, Tailwind CSS v4, React Router |
 | Backend  | FastAPI (Python), Pydantic              |
 | Database | Supabase (PostgREST)                    |
-| Hosting  | Vercel (frontend) + Railway (backend)   |
+| Hosting  | Vercel (frontend) + Render (backend)    |
 
 ---
 
@@ -46,7 +46,7 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 ```
 ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
 │  React + Vite │ ───▶ │   FastAPI    │ ───▶ │  Supabase    │
-│   (Vercel)    │      │  (Railway)   │      │ (PostgREST)  │
+│   (Vercel)    │      │   (Render)   │      │ (PostgREST)  │
 └──────────────┘      └──────────────┘      └──────────────┘
 ```
 
