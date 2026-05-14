@@ -105,8 +105,17 @@ Status changes on tickets automatically append a row to `ticket_history`.
 
 ---
 
+## Screenshots
+
+<!-- Add screenshots of the dashboard, ticket detail (with AI Suggestions), and RMA views here. -->
+_Coming soon._
+
+---
+
 ## About
 
 Built by [Sonny May](https://github.com/sonnymay) — tech support engineer, 9 years in the trenches.
+
+Built and used internally at Baicells Technologies to manage real support tickets, RMAs, and device history.
 
 If you've worked support and recognize the pain this is solving, I'd love to hear from you.

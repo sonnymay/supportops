@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import db_get, db_post, db_patch, db_delete
 from pydantic import BaseModel
 from typing import Optional
+import ai
 
 app = FastAPI(title="SupportOps API")
 
@@ -158,6 +159,21 @@ def dashboard():
         "critical": sum(1 for t in tickets if t.get("priority") == "Critical"),
         "rmas_in_progress": sum(1 for r in rmas if r.get("resolution_status") == "Pending"),
     }
+
+# --- AI ---
+class AISuggestRequest(BaseModel):
+    ticket_id: str
+
+@app.post("/ai/suggest")
+def ai_suggest(req: AISuggestRequest):
+    try:
+        return ai.suggest_for_ticket(req.ticket_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI suggestion failed: {e}")
 
 # --- Root ---
 @app.get("/")

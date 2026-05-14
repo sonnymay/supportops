@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import AISuggestions from "../components/AISuggestions";
 
 const STATUSES = ["Open", "In Progress", "Waiting on Customer", "Resolved", "Closed"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -94,6 +95,9 @@ export default function Tickets() {
           <p><span className="font-medium">Device:</span> {devices.find(d => d.id === selected.device_id)?.serial_number || "—"}</p>
         </div>
       </div>
+
+      {/* AI Suggestions */}
+      {selected && <AISuggestions ticketId={selected.id} />}
 
       {/* Notes */}
       <div className="bg-white rounded-lg shadow p-6 mb-4">
