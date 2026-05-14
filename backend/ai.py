@@ -13,7 +13,7 @@ from database import db_get
 load_dotenv()
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
+MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
 _client: Optional[Anthropic] = None
 
