@@ -95,6 +95,13 @@ Status changes on tickets automatically append a row to `ticket_history`.
 
 ---
 
+## Screenshots
+![Dashboard](public/screenshots/dashboard.png)
+![Ticket Detail](public/screenshots/ticket-detail.png)  
+![AI Suggestions](public/screenshots/ai-suggestions.png)
+
+---
+
 ## Roadmap
 
 - [ ] Full-text ticket search
