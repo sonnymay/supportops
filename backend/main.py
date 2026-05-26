@@ -11,8 +11,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://supportops.vercel.app"
+        "https://supportops.vercel.app",
     ],
+    # Allow Vercel preview deploys (e.g. supportops-git-branch-sonnymay.vercel.app)
+    allow_origin_regex=r"https://supportops-[a-z0-9-]+(-sonnymay)?\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

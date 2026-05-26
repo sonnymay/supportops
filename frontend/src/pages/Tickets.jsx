@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import AISuggestions from "../components/AISuggestions";
+import { LoadingState, ErrorState } from "../components/AsyncState";
 
 const STATUSES = ["Open", "In Progress", "Waiting on Customer", "Resolved", "Closed"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -31,11 +32,26 @@ export default function Tickets() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const load = () => {
-    api.get("/tickets").then(setTickets);
-    api.get("/customers").then(setCustomers);
-    api.get("/devices").then(setDevices);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [t, c, d] = await Promise.all([
+        api.get("/tickets"),
+        api.get("/customers"),
+        api.get("/devices"),
+      ]);
+      setTickets(t);
+      setCustomers(c);
+      setDevices(d);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadDetail = (t) => {
@@ -45,6 +61,9 @@ export default function Tickets() {
   };
 
   useEffect(() => { load(); }, []);
+
+  if (loading) return <LoadingState message="Loading tickets…" />;
+  if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
     if (!form.title) return alert("Title is required");

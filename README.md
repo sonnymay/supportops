@@ -15,15 +15,19 @@
 ## Table of contents
 
 - [Why this exists](#why-this-exists)
+- [What this code shows](#what-this-code-shows)
 - [Features](#features)
 - [Stack](#stack)
 - [Architecture](#architecture)
 - [Local development](#local-development)
+- [Deployment](#deployment)
 - [API surface](#api-surface)
 - [Screenshots](#screenshots)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
+
+> ⏱️ **First load can take up to a minute.** The demo backend runs on Render's free tier, which sleeps after 15 min of inactivity. The frontend fires a warm-up ping on app load and shows an informative loading state while the server wakes — so just give it a moment on the first visit. Subsequent requests are <1s.
 
 ---
 
@@ -40,6 +44,18 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 
 ---
 
+## What this code shows
+
+If you're reviewing this as a portfolio piece, the interesting bits are:
+
+- **FastAPI + Pydantic** as a thin validation/business-rules layer over Supabase's PostgREST API — no ORM, no schema duplication.
+- **Automatic audit logging** — every ticket status change appends a row to `ticket_history` from the API layer, not the client.
+- **AI Resolution Suggester** — Anthropic Claude (Haiku) reads a ticket plus its full notes history and proposes next steps. Wired in `backend/ai.py`.
+- **Resilient frontend** — `frontend/src/api.js` wraps `fetch` with `AbortController` timeouts, status checks, and a `useApiResource` hook that gives every page the same loading / error / retry UX.
+- **Cold-start UX** — the frontend warms the backend on mount and explains the wait, so a sleeping free-tier dyno never silently looks like a broken app.
+
+---
+
 ## Features
 
 - 🎫 **Tickets** with status, priority, assignee, and linked customer + device
@@ -48,6 +64,7 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 - 📝 **Ticket notes** for agent-side context and handoffs
 - 🕓 **Automatic status history** — every status change is logged with who and when
 - 📦 **RMA tracking** — RMA number, serial, shipping status, resolution status, linked to the originating ticket
+- 🤖 **AI Suggestions** — Claude-powered next-step recommendations per ticket
 
 ---
 
@@ -58,6 +75,7 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 | Frontend | React 19, Vite, Tailwind CSS v4, React Router |
 | Backend  | FastAPI (Python 3.11+), Pydantic              |
 | Database | Supabase (Postgres + PostgREST)               |
+| AI       | Anthropic Claude Haiku 4.5                    |
 | Hosting  | Vercel (frontend) · Render (backend)          |
 
 ---
@@ -68,10 +86,16 @@ SupportOps is the tool I wished I had. Tickets, devices, customers, RMAs, and a 
 ┌───────────────┐      ┌──────────────┐      ┌──────────────┐
 │  React + Vite │ ───▶ │   FastAPI    │ ───▶ │   Supabase   │
 │   (Vercel)    │      │   (Render)   │      │ (PostgREST)  │
-└───────────────┘      └──────────────┘      └──────────────┘
+└───────────────┘      └──────┬───────┘      └──────────────┘
+                              │
+                              ▼
+                       ┌──────────────┐
+                       │  Anthropic   │
+                       │    Claude    │
+                       └──────────────┘
 ```
 
-The FastAPI layer is intentionally thin — it validates with Pydantic, applies business rules (e.g. writing to `ticket_history` on every status change), and proxies to Supabase's REST API.
+The FastAPI layer is intentionally thin — it validates with Pydantic, applies business rules (e.g. writing to `ticket_history` on every status change), proxies CRUD to Supabase's REST API, and brokers calls to Claude for the AI Suggester.
 
 ---
 
@@ -82,6 +106,7 @@ The FastAPI layer is intentionally thin — it validates with Pydantic, applies 
 - Python 3.11+
 - Node.js 20+
 - A Supabase project (free tier is fine) — grab your `SUPABASE_URL` and `SUPABASE_KEY`
+- (Optional) An Anthropic API key if you want the AI Suggester to work locally
 
 ### Backend
 
@@ -89,16 +114,17 @@ The FastAPI layer is intentionally thin — it validates with Pydantic, applies 
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # then fill in SUPABASE_URL and SUPABASE_KEY
+cp .env.example .env   # then fill in SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
 uvicorn main:app --reload
 ```
 
-API runs at `http://localhost:8000`. Interactive docs at `/docs`.
+API runs at `http://localhost:8000`. Health check: `GET /health`. Interactive docs: `/docs`.
 
 ### Frontend
 
 ```bash
 cd frontend
+cp .env.example .env   # set VITE_API_BASE_URL=http://localhost:8000
 npm install
 npm run dev
 ```
@@ -107,15 +133,28 @@ App runs at `http://localhost:5173`.
 
 ---
 
+## Deployment
+
+- **Frontend** — Vercel, SPA rewrites in `frontend/vercel.json`. Env: `VITE_API_BASE_URL`.
+- **Backend** — Render web service from `render.yaml` at repo root. Python 3.11.9. Env: `SUPABASE_URL`, `SUPABASE_KEY`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`. Health check: `/health`.
+
+Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend on app load — see `frontend/src/api.js` (`warmupBackend`).
+
+---
+
 ## API surface
 
-| Resource      | Endpoints                                    |
-|---------------|----------------------------------------------|
-| Customers     | `GET/POST/PUT/DELETE /customers`             |
-| Devices       | `GET/POST/PUT /devices`                      |
-| Tickets       | `GET/POST/PUT /tickets`, `GET /tickets/{id}` |
-| Ticket Notes  | `GET/POST /ticket-notes`                     |
-| RMAs          | `GET/POST/PUT /rmas`                         |
+| Resource     | Endpoints                                          |
+|--------------|----------------------------------------------------|
+| Health       | `GET /health`                                      |
+| Dashboard    | `GET /dashboard`                                   |
+| Customers    | `GET/POST/PUT/DELETE /customers`                   |
+| Devices      | `GET/POST/PUT /devices`                            |
+| Tickets      | `GET/POST/PUT /tickets`, `GET /tickets/{id}`       |
+| Ticket Notes | `GET /tickets/{id}/notes`, `POST /notes`           |
+| Ticket Hist. | `GET /tickets/{id}/history` (auto-appended)        |
+| RMAs         | `GET/POST/PUT /rmas`                               |
+| AI           | `POST /tickets/{id}/ai-suggestions`                |
 
 Status changes on tickets automatically append a row to `ticket_history`.
 
@@ -127,6 +166,7 @@ Full OpenAPI spec available at `http://localhost:8000/docs` when the backend is 
 
 ![Dashboard](public/screenshots/dashboard.png)
 ![Ticket Detail](public/screenshots/ticket-detail.png)
+![AI Suggestions](public/screenshots/ai-suggestions.png)
 
 ---
 

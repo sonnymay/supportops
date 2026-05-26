@@ -1,15 +1,29 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { LoadingState, ErrorState } from "../components/AsyncState";
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "" });
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const load = () => api.get("/customers").then(setCustomers);
+  const load = () => {
+    setLoading(true);
+    setError(null);
+    return api
+      .get("/customers")
+      .then(setCustomers)
+      .catch((e) => setError(e.message || String(e)))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => { load(); }, []);
+
+  if (loading) return <LoadingState message="Loading customers…" />;
+  if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
     if (!form.name) return alert("Name is required");

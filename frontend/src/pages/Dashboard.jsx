@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import { api } from "../api";
+import { useApiResource } from "../api";
+import { LoadingState, ErrorState } from "../components/AsyncState";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+  const { data: stats, loading, error, reload } = useApiResource("/dashboard");
 
-  useEffect(() => { api.get("/dashboard").then(setStats); }, []);
-
-  if (!stats) return <p>Loading...</p>;
+  if (loading) return <LoadingState message="Loading dashboard…" />;
+  if (error) return <ErrorState error={error} onRetry={reload} />;
 
   const cards = [
     { label: "Open Tickets", value: stats.open_tickets, color: "bg-blue-500" },

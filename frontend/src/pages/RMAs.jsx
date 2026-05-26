@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { LoadingState, ErrorState } from "../components/AsyncState";
 
 export default function RMAs() {
   const [rmas, setRmas] = useState([]);
@@ -7,13 +8,27 @@ export default function RMAs() {
   const [form, setForm] = useState({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const load = () => {
-    api.get("/rmas").then(setRmas);
-    api.get("/tickets").then(setTickets);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [r, t] = await Promise.all([api.get("/rmas"), api.get("/tickets")]);
+      setRmas(r);
+      setTickets(t);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
+
+  if (loading) return <LoadingState message="Loading RMAs…" />;
+  if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
     if (!form.ticket_id) return alert("Ticket is required");

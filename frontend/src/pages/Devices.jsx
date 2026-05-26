@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { LoadingState, ErrorState } from "../components/AsyncState";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -7,13 +8,27 @@ export default function Devices() {
   const [form, setForm] = useState({ serial_number: "", model: "", product_type: "", customer_id: "" });
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const load = () => {
-    api.get("/devices").then(setDevices);
-    api.get("/customers").then(setCustomers);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [d, c] = await Promise.all([api.get("/devices"), api.get("/customers")]);
+      setDevices(d);
+      setCustomers(c);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
+
+  if (loading) return <LoadingState message="Loading devices…" />;
+  if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
     if (!form.serial_number) return alert("Serial number is required");
