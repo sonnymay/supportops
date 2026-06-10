@@ -22,7 +22,7 @@ jobs:
           cd backend
           echo "SUPABASE_URL=http://fake.supabase.co" > .env
           echo "SUPABASE_KEY=fakekey" >> .env
-          pytest -v
+          pytest --cov=. --cov-report=term-missing --cov-report=xml --cov-fail-under=70 -v
   frontend:
     runs-on: ubuntu-latest
     steps:
