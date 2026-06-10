@@ -67,6 +67,8 @@ jobs:
           echo "SUPABASE_URL=http://fake.supabase.co" > .env
           echo "SUPABASE_KEY=fakekey" >> .env
           pytest --cov=. --cov-report=term-missing --cov-report=xml --cov-fail-under=70 -v
+      - name: Build Docker image
+        run: docker build -t app ./backend
   frontend:
     runs-on: ubuntu-latest
     steps:
