@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import re
-from typing import Any, Optional
+from typing import Any
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -15,7 +15,7 @@ load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 
-_client: Optional[Anthropic] = None
+_client: Anthropic | None = None
 
 
 def _get_client() -> Anthropic:
@@ -40,11 +40,7 @@ def _fetch_notes(ticket_id: str) -> list[dict[str, Any]]:
 
 
 def _fetch_recent_resolved(limit: int = 30) -> list[dict[str, Any]]:
-    params = (
-        "status=in.(Resolved,Closed)"
-        "&order=created_at.desc"
-        f"&limit={limit}"
-    )
+    params = f"status=in.(Resolved,Closed)&order=created_at.desc&limit={limit}"
     tickets = db_get("tickets", params)
     if not isinstance(tickets, list):
         return []
@@ -64,7 +60,9 @@ def _summarize_notes(notes: list[dict[str, Any]], max_chars: int = 600) -> str:
     return text[:max_chars]
 
 
-def _build_prompt(ticket: dict[str, Any], notes: list[dict[str, Any]], history: list[dict[str, Any]]) -> str:
+def _build_prompt(
+    ticket: dict[str, Any], notes: list[dict[str, Any]], history: list[dict[str, Any]]
+) -> str:
     target = {
         "id": ticket.get("id"),
         "title": ticket.get("title"),
@@ -76,14 +74,16 @@ def _build_prompt(ticket: dict[str, Any], notes: list[dict[str, Any]], history: 
 
     past = []
     for t in history:
-        past.append({
-            "id": t.get("id"),
-            "title": t.get("title"),
-            "description": (t.get("description") or "")[:400],
-            "status": t.get("status"),
-            "priority": t.get("priority"),
-            "notes": _summarize_notes(t.get("_notes", [])),
-        })
+        past.append(
+            {
+                "id": t.get("id"),
+                "title": t.get("title"),
+                "description": (t.get("description") or "")[:400],
+                "status": t.get("status"),
+                "priority": t.get("priority"),
+                "notes": _summarize_notes(t.get("_notes", [])),
+            }
+        )
 
     return (
         "You are an expert technical support assistant. Compare the OPEN ticket below "
@@ -118,7 +118,7 @@ def _extract_json(text: str) -> dict[str, Any]:
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
-            text = text[start:end + 1]
+            text = text[start : end + 1]
     return json.loads(text)
 
 

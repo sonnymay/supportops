@@ -2,6 +2,7 @@
 Database (database.db_*) and the ai module are mocked so the suite runs in CI
 with no Supabase connection or API keys required.
 """
+
 import sys
 import types
 from unittest.mock import MagicMock
@@ -19,8 +20,10 @@ def client(monkeypatch):
     fake_ai.suggest_for_ticket = MagicMock(return_value={"matches": []})
     sys.modules["ai"] = fake_ai
     import importlib
+
     import database
     import main
+
     importlib.reload(database)
     importlib.reload(main)
     return TestClient(main.app), main
@@ -53,9 +56,19 @@ def test_get_customers_returns_db_rows(client, monkeypatch):
 def test_customer_crud_delegates_to_database(client, monkeypatch):
     test_client, main = client
     calls = []
-    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append(("post", table, data)) or data)
-    monkeypatch.setattr(main, "db_patch", lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data)
-    monkeypatch.setattr(main, "db_delete", lambda table, row_id: calls.append(("delete", table, row_id)) or {"deleted": row_id})
+    monkeypatch.setattr(
+        main, "db_post", lambda table, data: calls.append(("post", table, data)) or data
+    )
+    monkeypatch.setattr(
+        main,
+        "db_patch",
+        lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data,
+    )
+    monkeypatch.setattr(
+        main,
+        "db_delete",
+        lambda table, row_id: calls.append(("delete", table, row_id)) or {"deleted": row_id},
+    )
 
     create_res = test_client.post("/customers", json={"name": "Acme", "email": "ops@example.com"})
     update_res = test_client.put("/customers/c1", json={"name": "Acme Updated"})
@@ -64,7 +77,11 @@ def test_customer_crud_delegates_to_database(client, monkeypatch):
     assert create_res.status_code == 200
     assert update_res.status_code == 200
     assert delete_res.status_code == 200
-    assert calls[0] == ("post", "customers", {"name": "Acme", "email": "ops@example.com", "phone": None, "company": None})
+    assert calls[0] == (
+        "post",
+        "customers",
+        {"name": "Acme", "email": "ops@example.com", "phone": None, "company": None},
+    )
     assert calls[1][0:3] == ("patch", "customers", "c1")
     assert calls[2] == ("delete", "customers", "c1")
 
@@ -74,8 +91,14 @@ def test_device_routes_delegate_to_database(client, monkeypatch):
     rows = [{"id": "d1", "serial_number": "SN-1"}]
     calls = []
     monkeypatch.setattr(main, "db_get", lambda table, params="": rows)
-    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append(("post", table, data)) or data)
-    monkeypatch.setattr(main, "db_patch", lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data)
+    monkeypatch.setattr(
+        main, "db_post", lambda table, data: calls.append(("post", table, data)) or data
+    )
+    monkeypatch.setattr(
+        main,
+        "db_patch",
+        lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data,
+    )
 
     list_res = test_client.get("/devices")
     create_res = test_client.post("/devices", json={"serial_number": "SN-1", "model": "Router"})
@@ -113,12 +136,17 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     assert get_res.status_code == 200
     assert create_res.status_code == 200
     assert update_res.status_code == 200
-    assert ("ticket_history", {"ticket_id": "t1", "old_status": "Open", "new_status": "Closed", "changed_by": "Agent"}) in posts
+    assert (
+        "ticket_history",
+        {"ticket_id": "t1", "old_status": "Open", "new_status": "Closed", "changed_by": "Agent"},
+    ) in posts
 
 
 def test_notes_and_history_routes_delegate_to_database(client, monkeypatch):
     test_client, main = client
-    monkeypatch.setattr(main, "db_get", lambda table, params="": [{"table": table, "params": params}])
+    monkeypatch.setattr(
+        main, "db_get", lambda table, params="": [{"table": table, "params": params}]
+    )
     monkeypatch.setattr(main, "db_post", lambda table, data: {"table": table, **data})
 
     notes_res = test_client.get("/tickets/t1/notes")
@@ -136,13 +164,23 @@ def test_notes_and_history_routes_delegate_to_database(client, monkeypatch):
 def test_rma_routes_delegate_to_database(client, monkeypatch):
     test_client, main = client
     calls = []
-    monkeypatch.setattr(main, "db_get", lambda table, params="": [{"id": "r1", "resolution_status": "Pending"}])
-    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append(("post", table, data)) or data)
-    monkeypatch.setattr(main, "db_patch", lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data)
+    monkeypatch.setattr(
+        main, "db_get", lambda table, params="": [{"id": "r1", "resolution_status": "Pending"}]
+    )
+    monkeypatch.setattr(
+        main, "db_post", lambda table, data: calls.append(("post", table, data)) or data
+    )
+    monkeypatch.setattr(
+        main,
+        "db_patch",
+        lambda table, row_id, data: calls.append(("patch", table, row_id, data)) or data,
+    )
 
     list_res = test_client.get("/rmas")
     create_res = test_client.post("/rmas", json={"ticket_id": "t1", "rma_number": "RMA-1"})
-    update_res = test_client.put("/rmas/r1", json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Shipped"})
+    update_res = test_client.put(
+        "/rmas/r1", json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Shipped"}
+    )
 
     assert list_res.status_code == 200
     assert create_res.status_code == 200
