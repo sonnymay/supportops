@@ -3,6 +3,10 @@ __pycache__/
 *.pyc
 backend/venv/
 backend/.venv/
+.coverage
+coverage.xml
+backend/.coverage
+backend/coverage.xml
 
 # Node / frontend
 node_modules/
