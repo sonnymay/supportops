@@ -112,6 +112,12 @@ The FastAPI layer is intentionally thin — it validates with Pydantic, applies 
 
 ## Local development
 
+```bash
+docker compose up --build
+```
+
+Docker starts the API at `http://localhost:8000`. Create `backend/.env` from `backend/.env.example` before first run.
+
 ### Prerequisites
 
 - Python 3.11+
