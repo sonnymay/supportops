@@ -139,7 +139,11 @@ def suggest_for_ticket(ticket_id: str) -> dict[str, Any]:
         messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = "".join(block.text for block in msg.content if getattr(block, "type", None) == "text")
+    raw = "".join(
+        str(getattr(block, "text", ""))
+        for block in msg.content
+        if getattr(block, "type", None) == "text"
+    )
 
     try:
         parsed = _extract_json(raw)

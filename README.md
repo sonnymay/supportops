@@ -124,7 +124,8 @@ The FastAPI layer is intentionally thin — it validates with Pydantic, applies 
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pre-commit install
 cp .env.example .env   # then fill in SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
 uvicorn main:app --reload
 ```
