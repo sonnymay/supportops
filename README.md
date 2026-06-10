@@ -1,6 +1,6 @@
 # SupportOps
 
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
+[![CI](https://github.com/sonnymay/supportops/actions/workflows/ci.yml/badge.svg)](https://github.com/sonnymay/supportops/actions/workflows/ci.yml) [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/demo-supportops.vercel.app-brightgreen)](https://supportops.vercel.app)
