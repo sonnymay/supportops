@@ -36,6 +36,49 @@ def test_health_returns_ok(client):
     assert res.json() == {"status": "ok"}
 
 
+def test_dependency_health_returns_ok_when_supabase_reachable(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main.database, "is_configured", lambda: True)
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [])
+
+    res = test_client.get("/health/dependencies")
+
+    assert res.status_code == 200
+    assert res.json() == {
+        "status": "ok",
+        "supabase": {"configured": True, "reachable": True, "detail": None},
+    }
+
+
+def test_dependency_health_returns_503_when_supabase_missing_config(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main.database, "is_configured", lambda: False)
+
+    res = test_client.get("/health/dependencies")
+
+    assert res.status_code == 503
+    assert res.json()["status"] == "error"
+    assert res.json()["supabase"]["configured"] is False
+
+
+def test_dependency_health_returns_503_when_supabase_query_fails(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main.database, "is_configured", lambda: True)
+    monkeypatch.setattr(
+        main,
+        "db_get",
+        lambda table, params="": (_ for _ in ()).throw(
+            main.DatabaseRequestError("SupportOps database is unavailable.")
+        ),
+    )
+
+    res = test_client.get("/health/dependencies")
+
+    assert res.status_code == 503
+    assert res.json()["status"] == "error"
+    assert res.json()["supabase"]["reachable"] is False
+
+
 def test_get_ticket_not_found_returns_404(client, monkeypatch):
     test_client, main = client
     monkeypatch.setattr(main, "db_get", lambda table, params="": [])
@@ -112,6 +155,27 @@ def test_device_routes_delegate_to_database(client, monkeypatch):
     assert calls[1][0:3] == ("patch", "devices", "d1")
 
 
+def test_device_routes_convert_blank_customer_id_to_null(client, monkeypatch):
+    test_client, main = client
+    calls = []
+    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append((table, data)) or data)
+
+    res = test_client.post(
+        "/devices", json={"serial_number": "SN-1", "model": "Router", "customer_id": ""}
+    )
+
+    assert res.status_code == 200
+    assert calls[0] == (
+        "devices",
+        {
+            "serial_number": "SN-1",
+            "model": "Router",
+            "product_type": None,
+            "customer_id": None,
+        },
+    )
+
+
 def test_ticket_routes_create_update_and_record_status_history(client, monkeypatch):
     test_client, main = client
     posts = []
@@ -140,6 +204,28 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
         "ticket_history",
         {"ticket_id": "t1", "old_status": "Open", "new_status": "Closed", "changed_by": "Agent"},
     ) in posts
+
+
+def test_ticket_routes_convert_blank_relationship_ids_to_null(client, monkeypatch):
+    test_client, main = client
+    calls = []
+    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append((table, data)) or data)
+
+    res = test_client.post(
+        "/tickets",
+        json={
+            "title": "Printer down",
+            "customer_id": "",
+            "device_id": "",
+            "assigned_user_id": "",
+        },
+    )
+
+    assert res.status_code == 200
+    assert calls[0][0] == "tickets"
+    assert calls[0][1]["customer_id"] is None
+    assert calls[0][1]["device_id"] is None
+    assert calls[0][1]["assigned_user_id"] is None
 
 
 def test_notes_and_history_routes_delegate_to_database(client, monkeypatch):

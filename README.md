@@ -137,6 +137,8 @@ uvicorn main:app --reload
 ```
 
 API runs at `http://localhost:8000`. Health check: `GET /health`. Interactive docs: `/docs`.
+Dependency check: `GET /health/dependencies`.
+The Supabase table setup lives in `backend/supabase/schema.sql`.
 
 ### Frontend
 
