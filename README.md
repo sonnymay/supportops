@@ -19,6 +19,7 @@
 - [Features](#features)
 - [Stack](#stack)
 - [Architecture](#architecture)
+- [Engineering tradeoffs](#engineering-tradeoffs)
 - [Local development](#local-development)
 - [Deployment](#deployment)
 - [API surface](#api-surface)
@@ -53,6 +54,7 @@ If you're reviewing this as a portfolio piece, the interesting bits are:
 - **AI Resolution Suggester** — Anthropic Claude (Haiku) reads a ticket plus its full notes history and proposes next steps. Wired in `backend/ai.py`.
 - **Resilient frontend** — `frontend/src/api.js` wraps `fetch` with `AbortController` timeouts, status checks, and a `useApiResource` hook that gives every page the same loading / error / retry UX.
 - **Cold-start UX** — the frontend warms the backend on mount and explains the wait, so a sleeping free-tier dyno never silently looks like a broken app.
+- **Secret-free tests** — backend tests mock Supabase and AI boundaries, so CI can validate behavior without production keys.
 
 ---
 
@@ -96,6 +98,18 @@ If you're reviewing this as a portfolio piece, the interesting bits are:
 ```
 
 The FastAPI layer is intentionally thin — it validates with Pydantic, applies business rules (e.g. writing to `ticket_history` on every status change), proxies CRUD to Supabase's REST API, and brokers calls to Claude for the AI Suggester.
+
+---
+
+## Engineering tradeoffs
+
+| Choice | Why it fits this project |
+|--------|---------------------------|
+| Supabase PostgREST instead of an ORM | Keeps the backend small and avoids duplicating schema definitions across Python and Postgres. |
+| Backend-owned ticket history | Prevents the client from accidentally skipping audit logs when ticket status changes. |
+| Mocked Supabase/AI tests | CI stays fast, deterministic, and safe to run without live service credentials. |
+| Render free tier with warm-up UX | Keeps hosting cost at zero while making cold starts visible instead of mysterious. |
+| AI suggester behind the API | Keeps provider keys off the client and lets the app degrade if AI is unavailable. |
 
 ---
 
