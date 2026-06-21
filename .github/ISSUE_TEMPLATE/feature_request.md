@@ -16,7 +16,7 @@ Describe the feature you'd like to see. Be as specific as possible.
 
 ## Use Case
 
-Who benefits from this feature, and how would they use it? 
+Who benefits from this feature, and how would they use it?
 
 > Example: "As a support agent, I want to bulk-close resolved tickets so I don't have to close them one by one."
 
