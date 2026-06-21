@@ -59,16 +59,15 @@ PR description template:
 
 ```md
 ## Summary
-- 
+-
 
 ## Testing
-- 
+-
 
 ## Notes
-- 
+-
 ```
 
 ## Bug Reports
 
 Open a bug report in [GitHub Issues](https://github.com/sonnymay/supportops/issues). Include what happened, what you expected, steps to reproduce it, and any relevant screenshots or logs.
-
