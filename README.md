@@ -67,34 +67,36 @@ If you're reviewing this as a portfolio piece, the interesting bits are:
 - 🕓 **Automatic status history** — every status change is logged with who and when
 - 📦 **RMA tracking** — RMA number, serial, shipping status, resolution status, linked to the originating ticket
 - 🤖 **AI Suggestions** — Claude-powered next-step recommendations per ticket
+- 🔍 **Ticket search** — full-text search across titles and descriptions via `GET /tickets/search?q=`
+- 🗂️ **Ticket filtering** — filter by status, priority, and assignee via `GET /tickets/filter`
 
 ---
 
 ## Stack
 
-| Layer    | Tech                                          |
+| Layer | Tech |
 |----------|-----------------------------------------------|
 | Frontend | React 19, Vite, Tailwind CSS v4, React Router |
-| Backend  | FastAPI (Python 3.11+), Pydantic              |
-| Database | Supabase (Postgres + PostgREST)               |
-| AI       | Anthropic Claude Haiku 4.5                    |
-| Hosting  | Vercel (frontend) · Render (backend)          |
+| Backend | FastAPI (Python 3.11+), Pydantic |
+| Database | Supabase (Postgres + PostgREST) |
+| AI | Anthropic Claude Haiku 4.5 |
+| Hosting | Vercel (frontend) · Render (backend) |
 
 ---
 
 ## Architecture
 
 ```
-┌───────────────┐      ┌──────────────┐      ┌──────────────┐
-│  React + Vite │ ───▶ │   FastAPI    │ ───▶ │   Supabase   │
-│   (Vercel)    │      │   (Render)   │      │ (PostgREST)  │
-└───────────────┘      └──────┬───────┘      └──────────────┘
-                              │
-                              ▼
-                       ┌──────────────┐
-                       │  Anthropic   │
-                       │    Claude    │
-                       └──────────────┘
+┌───────────────┐    ┌──────────────┐    ┌──────────────┐
+│ React + Vite  │ ──▶ │   FastAPI    │ ──▶ │   Supabase   │
+│   (Vercel)    │    │   (Render)   │    │ (PostgREST)  │
+└───────────────┘    └──────┬───────┘    └──────────────┘
+                            │
+                            ▼
+                     ┌──────────────┐
+                     │  Anthropic   │
+                     │    Claude    │
+                     └──────────────┘
 ```
 
 The FastAPI layer is intentionally thin — it validates with Pydantic, applies business rules (e.g. writing to `ticket_history` on every status change), proxies CRUD to Supabase's REST API, and brokers calls to Claude for the AI Suggester.
@@ -135,7 +137,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 pre-commit install
-cp .env.example .env   # then fill in SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
+cp .env.example .env # then fill in SUPABASE_URL, SUPABASE_KEY, ANTHROPIC_API_KEY
 uvicorn main:app --reload
 ```
 
@@ -147,7 +149,7 @@ The Supabase table setup lives in `backend/supabase/schema.sql`.
 
 ```bash
 cd frontend
-cp .env.example .env   # set VITE_API_BASE_URL=http://localhost:8000
+cp .env.example .env # set VITE_API_BASE_URL=http://localhost:8000
 npm install
 npm run dev
 ```
@@ -167,17 +169,19 @@ Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend
 
 ## API surface
 
-| Resource     | Endpoints                                          |
-|--------------|----------------------------------------------------|
-| Health       | `GET /health`                                      |
-| Dashboard    | `GET /dashboard`                                   |
-| Customers    | `GET/POST/PUT/DELETE /customers`                   |
-| Devices      | `GET/POST/PUT /devices`                            |
-| Tickets      | `GET/POST/PUT /tickets`, `GET /tickets/{id}`       |
-| Ticket Notes | `GET /tickets/{id}/notes`, `POST /notes`           |
-| Ticket Hist. | `GET /tickets/{id}/history` (auto-appended)        |
-| RMAs         | `GET/POST/PUT /rmas`                               |
-| AI           | `POST /tickets/{id}/ai-suggestions`                |
+| Resource | Endpoints |
+|-----------------|----------------------------------------------------------------------|
+| Health          | `GET /health`, `GET /health/dependencies`                          |
+| Dashboard       | `GET /dashboard`                                                    |
+| Customers       | `GET/POST/PUT/DELETE /customers`                                    |
+| Devices         | `GET/POST/PUT /devices`                                             |
+| Tickets         | `GET/POST/PUT /tickets`, `GET /tickets/{id}`                       |
+| Ticket Search   | `GET /tickets/search?q={term}`                                      |
+| Ticket Filter   | `GET /tickets/filter?status=&priority=&assignee=`                   |
+| Ticket Notes    | `GET /tickets/{id}/notes`, `POST /notes`                           |
+| Ticket Hist.    | `GET /tickets/{id}/history` (auto-appended on status change)        |
+| RMAs            | `GET/POST/PUT /rmas`                                                |
+| AI              | `POST /ai/suggest`                                                  |
 
 Status changes on tickets automatically append a row to `ticket_history`.
 
@@ -195,7 +199,8 @@ Full OpenAPI spec available at `http://localhost:8000/docs` when the backend is 
 
 ## Roadmap
 
-- [ ] Full-text search across tickets and notes
+- [x] Full-text search across tickets (`GET /tickets/search`)
+- [x] Filter tickets by status, priority, assignee (`GET /tickets/filter`)
 - [ ] SLA timers with breach alerts
 - [ ] Saved views / filters per agent
 - [ ] CSV export of tickets and RMAs
