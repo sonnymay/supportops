@@ -1,3 +1,123 @@
+
+
+# ---------------------------------------------------------------------------
+# Search and filter endpoint tests (added for v1.3.0 endpoints)
+# ---------------------------------------------------------------------------
+
+def test_search_tickets_returns_matching_rows(client, monkeypatch):
+    test_client, main = client
+    rows = [{"id": "t1", "title": "Printer down", "description": "Jammed"}]
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["table"] = table
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    res = test_client.get("/tickets/search?q=printer")
+
+    assert res.status_code == 200
+    assert res.json() == rows
+    assert captured["table"] == "tickets"
+    assert "printer" in captured["params"].lower()
+
+
+def test_search_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [])
+
+    res = test_client.get("/tickets/search?q=nonexistent")
+
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+def test_filter_tickets_by_status(client, monkeypatch):
+    test_client, main = client
+    rows = [{"id": "t2", "status": "Open", "priority": "High", "assigned_user_id": None}]
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["table"] = table
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    res = test_client.get("/tickets/filter?status=Open")
+
+    assert res.status_code == 200
+    assert res.json() == rows
+    assert captured["table"] == "tickets"
+    assert "Open" in captured["params"]
+
+
+def test_filter_tickets_by_priority(client, monkeypatch):
+    test_client, main = client
+    rows = [{"id": "t3", "status": "In Progress", "priority": "Critical", "assigned_user_id": "u1"}]
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    res = test_client.get("/tickets/filter?priority=Critical")
+
+    assert res.status_code == 200
+    assert res.json() == rows
+    assert "Critical" in captured["params"]
+
+
+def test_filter_tickets_by_assignee(client, monkeypatch):
+    test_client, main = client
+    rows = [{"id": "t4", "status": "Open", "priority": "Low", "assigned_user_id": "agent-7"}]
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    res = test_client.get("/tickets/filter?assignee=agent-7")
+
+    assert res.status_code == 200
+    assert res.json() == rows
+    assert "agent-7" in captured["params"]
+
+
+def test_filter_tickets_with_multiple_params(client, monkeypatch):
+    test_client, main = client
+    rows = [{"id": "t5", "status": "Open", "priority": "High", "assigned_user_id": "u2"}]
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    res = test_client.get("/tickets/filter?status=Open&priority=High&assignee=u2")
+
+    assert res.status_code == 200
+    assert res.json() == rows
+    assert "Open" in captured["params"]
+    assert "High" in captured["params"]
+    assert "u2" in captured["params"]
+
+
+def test_filter_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [])
+
+    res = test_client.get("/tickets/filter?status=Resolved")
+
+    assert res.status_code == 200
+    assert res.json() == []
 """Unit tests for the SupportOps FastAPI backend.
 Database (database.db_*) and the ai module are mocked so the suite runs in CI
 with no Supabase connection or API keys required.
