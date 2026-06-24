@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from typing import Literal
 
 import ai
 import database
@@ -145,13 +146,37 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
 
     Uses Supabase PostgREST ilike filters — case-insensitive substring match.
     Returns tickets where the term appears in title OR description, sorted by
-    most recently updated first.
+    most recently created first.
     """
     term = q.strip()
     results = db_get(
         "tickets",
         f"or=(title.ilike.*{term}*,description.ilike.*{term}*)&order=created_at.desc",
     )
+    return results if isinstance(results, list) else []
+
+@app.get("/tickets/filter")
+def filter_tickets(
+    status: str | None = Query(None, description="Filter by status: Open, In Progress, Closed"),
+    priority: str | None = Query(None, description="Filter by priority: Low, Medium, High, Critical"),
+    assigned_user_id: str | None = Query(None, description="Filter by assigned agent ID"),
+):
+    """Return tickets filtered by any combination of status, priority, and assignee.
+
+    All parameters are optional — omitting a parameter means 'any value'.
+    Results are sorted most-recently-created first.
+    Supports the saved-views pattern: callers can persist query params as a named view.
+    """
+    parts: list[str] = []
+    if status:
+        parts.append(f"status=eq.{status}")
+    if priority:
+        parts.append(f"priority=eq.{priority}")
+    if assigned_user_id:
+        parts.append(f"assigned_user_id=eq.{assigned_user_id}")
+    parts.append("order=created_at.desc")
+    query = "&".join(parts)
+    results = db_get("tickets", query)
     return results if isinstance(results, list) else []
 
 @app.get("/tickets/{id}")
