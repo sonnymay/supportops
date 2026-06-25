@@ -113,7 +113,7 @@ def test_filter_tickets_by_assignee(client, monkeypatch):
 
     monkeypatch.setattr(main, "db_get", fake_get)
 
-    res = test_client.get("/tickets/filter?assignee=agent-7")
+    res = test_client.get("/tickets/filter?assigned_user_id=agent-7")
 
     assert res.status_code == 200
     assert res.json() == rows
@@ -131,7 +131,7 @@ def test_filter_tickets_with_multiple_params(client, monkeypatch):
 
     monkeypatch.setattr(main, "db_get", fake_get)
 
-    res = test_client.get("/tickets/filter?status=Open&priority=High&assignee=u2")
+    res = test_client.get("/tickets/filter?status=Open&priority=High&assigned_user_id=u2")
 
     assert res.status_code == 200
     assert res.json() == rows
