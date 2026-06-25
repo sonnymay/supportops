@@ -33,6 +33,7 @@ def client(monkeypatch):
 # Search and filter endpoint tests (added for v1.3.0 endpoints)
 # ---------------------------------------------------------------------------
 
+
 def test_search_tickets_returns_matching_rows(client, monkeypatch):
     test_client, main = client
     rows = [{"id": "t1", "title": "Printer down", "description": "Jammed"}]
@@ -147,6 +148,7 @@ def test_filter_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
 
     assert res.status_code == 200
     assert res.json() == []
+
 
 def test_health_returns_ok(client):
     test_client, _ = client
