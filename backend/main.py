@@ -178,7 +178,9 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
 @app.get("/tickets/filter")
 def filter_tickets(
     status: str | None = Query(None, description="Filter by status: Open, In Progress, Closed"),
-    priority: str | None = Query(None, description="Filter by priority: Low, Medium, High, Critical"),
+    priority: str | None = Query(
+        None, description="Filter by priority: Low, Medium, High, Critical"
+    ),
     assigned_user_id: str | None = Query(None, description="Filter by assigned agent ID"),
 ):
     """Return tickets filtered by any combination of status, priority, and assignee.
