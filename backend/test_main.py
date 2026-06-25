@@ -1,3 +1,32 @@
+"""Unit tests for the SupportOps FastAPI backend.
+Database (database.db_*) and the ai module are mocked so the suite runs in CI
+with no Supabase connection or API keys required.
+"""
+
+import sys
+import types
+from unittest.mock import MagicMock
+
+import pytest
+from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "http://fake.supabase.co")
+    monkeypatch.setenv("SUPABASE_KEY", "fake-key")
+    fake_ai = types.ModuleType("ai")
+    fake_ai.suggest = MagicMock(return_value="stubbed")
+    fake_ai.suggest_for_ticket = MagicMock(return_value={"matches": []})
+    sys.modules["ai"] = fake_ai
+    import importlib
+
+    import database
+    import main
+
+    importlib.reload(database)
+    importlib.reload(main)
+    return TestClient(main.app), main
 
 
 # ---------------------------------------------------------------------------
@@ -118,36 +147,6 @@ def test_filter_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
 
     assert res.status_code == 200
     assert res.json() == []
-"""Unit tests for the SupportOps FastAPI backend.
-Database (database.db_*) and the ai module are mocked so the suite runs in CI
-with no Supabase connection or API keys required.
-"""
-
-import sys
-import types
-from unittest.mock import MagicMock
-
-import pytest
-from fastapi.testclient import TestClient
-
-
-@pytest.fixture
-def client(monkeypatch):
-    monkeypatch.setenv("SUPABASE_URL", "http://fake.supabase.co")
-    monkeypatch.setenv("SUPABASE_KEY", "fake-key")
-    fake_ai = types.ModuleType("ai")
-    fake_ai.suggest = MagicMock(return_value="stubbed")
-    fake_ai.suggest_for_ticket = MagicMock(return_value={"matches": []})
-    sys.modules["ai"] = fake_ai
-    import importlib
-
-    import database
-    import main
-
-    importlib.reload(database)
-    importlib.reload(main)
-    return TestClient(main.app), main
-
 
 def test_health_returns_ok(client):
     test_client, _ = client
