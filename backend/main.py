@@ -1,11 +1,11 @@
-import ai
-import database
-from database import DatabaseConfigError, DatabaseRequestError, db_delete, db_get, db_patch, db_post
-
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+import ai
+import database
+from database import DatabaseConfigError, DatabaseRequestError, db_delete, db_get, db_patch, db_post
 
 app = FastAPI(title="SupportOps API")
 
