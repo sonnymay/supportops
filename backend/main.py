@@ -22,13 +22,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.exception_handler(DatabaseConfigError)
 def database_config_error(_request: Request, exc: DatabaseConfigError):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
+
 @app.exception_handler(DatabaseRequestError)
 def database_request_error(_request: Request, exc: DatabaseRequestError):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
 
 # --- Models ---
 class Customer(BaseModel):
@@ -37,11 +40,13 @@ class Customer(BaseModel):
     phone: str | None = None
     company: str | None = None
 
+
 class Device(BaseModel):
     serial_number: str
     model: str | None = None
     product_type: str | None = None
     customer_id: str | None = None
+
 
 class Ticket(BaseModel):
     title: str
@@ -52,10 +57,12 @@ class Ticket(BaseModel):
     device_id: str | None = None
     assigned_user_id: str | None = None
 
+
 class TicketNote(BaseModel):
     ticket_id: str
     note_text: str
     created_by: str | None = "Agent"
+
 
 class RMA(BaseModel):
     ticket_id: str
@@ -64,19 +71,23 @@ class RMA(BaseModel):
     shipping_status: str | None = "Pending"
     resolution_status: str | None = "Pending"
 
+
 def clean_empty_strings(data: dict, *keys: str) -> dict:
     for key in keys:
         if data.get(key) == "":
             data[key] = None
     return data
 
+
 def model_data(model: BaseModel) -> dict:
     return model.model_dump()
+
 
 # --- Health ---
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.get("/health/dependencies")
 def dependency_health(response: Response):
@@ -104,40 +115,49 @@ def dependency_health(response: Response):
         },
     }
 
+
 # --- Customers ---
 @app.get("/customers")
 def get_customers():
     return db_get("customers", "order=created_at.desc")
 
+
 @app.post("/customers")
 def create_customer(c: Customer):
     return db_post("customers", model_data(c))
+
 
 @app.put("/customers/{id}")
 def update_customer(id: str, c: Customer):
     return db_patch("customers", id, model_data(c))
 
+
 @app.delete("/customers/{id}")
 def delete_customer(id: str):
     return db_delete("customers", id)
+
 
 # --- Devices ---
 @app.get("/devices")
 def get_devices():
     return db_get("devices", "order=created_at.desc")
 
+
 @app.post("/devices")
 def create_device(d: Device):
     return db_post("devices", clean_empty_strings(model_data(d), "customer_id"))
+
 
 @app.put("/devices/{id}")
 def update_device(id: str, d: Device):
     return db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id"))
 
+
 # --- Tickets ---
 @app.get("/tickets")
 def get_tickets():
     return db_get("tickets", "order=created_at.desc")
+
 
 @app.get("/tickets/search")
 def search_tickets(q: str = Query(..., min_length=1, description="Search term")):
@@ -153,6 +173,7 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
         f"or=(title.ilike.*{term}*,description.ilike.*{term}*)&order=created_at.desc",
     )
     return results if isinstance(results, list) else []
+
 
 @app.get("/tickets/filter")
 def filter_tickets(
@@ -178,6 +199,7 @@ def filter_tickets(
     results = db_get("tickets", query)
     return results if isinstance(results, list) else []
 
+
 @app.get("/tickets/{id}")
 def get_ticket(id: str):
     result = db_get("tickets", f"id=eq.{id}")
@@ -185,12 +207,14 @@ def get_ticket(id: str):
         raise HTTPException(status_code=404, detail="Ticket not found")
     return result[0]
 
+
 @app.post("/tickets")
 def create_ticket(t: Ticket):
     return db_post(
         "tickets",
         clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id"),
     )
+
 
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
@@ -208,32 +232,39 @@ def update_ticket(id: str, t: Ticket):
         )
     return db_patch("tickets", id, data)
 
+
 # --- Notes ---
 @app.get("/tickets/{id}/notes")
 def get_notes(id: str):
     return db_get("ticket_notes", f"ticket_id=eq.{id}&order=created_at.asc")
 
+
 @app.post("/notes")
 def create_note(n: TicketNote):
     return db_post("ticket_notes", model_data(n))
+
 
 # --- History ---
 @app.get("/tickets/{id}/history")
 def get_history(id: str):
     return db_get("ticket_history", f"ticket_id=eq.{id}&order=changed_at.asc")
 
+
 # --- RMAs ---
 @app.get("/rmas")
 def get_rmas():
     return db_get("rmas", "order=created_at.desc")
 
+
 @app.post("/rmas")
 def create_rma(r: RMA):
     return db_post("rmas", model_data(r))
 
+
 @app.put("/rmas/{id}")
 def update_rma(id: str, r: RMA):
     return db_patch("rmas", id, model_data(r))
+
 
 # --- Dashboard ---
 @app.get("/dashboard")
@@ -252,9 +283,11 @@ def dashboard():
         "rmas_in_progress": sum(1 for r in rmas if r.get("resolution_status") == "Pending"),
     }
 
+
 # --- AI ---
 class AISuggestRequest(BaseModel):
     ticket_id: str
+
 
 @app.post("/ai/suggest")
 def ai_suggest(req: AISuggestRequest):
@@ -266,6 +299,7 @@ def ai_suggest(req: AISuggestRequest):
         raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI suggestion failed: {e}") from e
+
 
 # --- Root ---
 @app.get("/")
