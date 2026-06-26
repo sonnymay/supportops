@@ -13,6 +13,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - CSV export of tickets and RMAs
 - Email intake — create tickets from inbound email via webhook
 - Full-text search across tickets and notes (`GET /tickets/search`)
+- Webhook notifications for ticket status changes (Slack, Discord)
 - Saved views / filter presets per agent (`GET /tickets/filter`)
 
 ---
