@@ -222,6 +222,7 @@ def create_ticket(t: Ticket):
 def update_ticket(id: str, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
     old = db_get("tickets", f"id=eq.{id}&select=status")
+    result = db_patch("tickets", id, data)
     if old and old[0]["status"] != data["status"]:
         db_post(
             "ticket_history",
@@ -232,7 +233,7 @@ def update_ticket(id: str, t: Ticket):
                 "changed_by": "Agent",
             },
         )
-    return db_patch("tickets", id, data)
+    return result
 
 
 # --- Notes ---
