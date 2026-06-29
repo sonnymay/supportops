@@ -54,10 +54,18 @@ export default function Tickets() {
     }
   };
 
-  const loadDetail = (t) => {
+  const loadDetail = async (t) => {
     setSelected(t);
-    api.get(`/tickets/${t.id}/notes`).then(setNotes);
-    api.get(`/tickets/${t.id}/history`).then(setHistory);
+    try {
+      const [n, h] = await Promise.all([
+        api.get(`/tickets/${t.id}/notes`),
+        api.get(`/tickets/${t.id}/history`),
+      ]);
+      setNotes(n);
+      setHistory(h);
+    } catch (e) {
+      setError(e.message || String(e));
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -89,7 +97,11 @@ export default function Tickets() {
     if (!newNote.trim()) return;
     await api.post("/notes", { ticket_id: selected.id, note_text: newNote, created_by: "Agent" });
     setNewNote("");
-    api.get(`/tickets/${selected.id}/notes`).then(setNotes);
+    try {
+      setNotes(await api.get(`/tickets/${selected.id}/notes`));
+    } catch (e) {
+      setError(e.message || String(e));
+    }
   };
 
   const getName = (arr, id) => arr.find(x => x.id === id)?.name || "—";
