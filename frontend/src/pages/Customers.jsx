@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { LoadingState, ErrorState } from "../components/AsyncState";
+import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
@@ -9,6 +9,8 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -28,28 +30,49 @@ export default function Customers() {
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
-    if (!form.name) return alert("Name is required");
-    if (editing) {
-      await api.put(`/customers/${editing}`, form);
-    } else {
-      await api.post("/customers", form);
+    setActionError(null);
+    if (!form.name.trim()) {
+      setActionError("Name is required.");
+      return;
     }
-    setForm({ name: "", email: "", phone: "", company: "" });
-    setEditing(null);
-    setShowForm(false);
-    load();
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/customers/${editing}`, form);
+      } else {
+        await api.post("/customers", form);
+      }
+      setForm({ name: "", email: "", phone: "", company: "" });
+      setEditing(null);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (c) => {
     setForm({ name: c.name, email: c.email || "", phone: c.phone || "", company: c.company || "" });
     setEditing(c.id);
+    setActionError(null);
     setShowForm(true);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Delete this customer?")) return;
-    await api.delete(`/customers/${id}`);
-    load();
+    setActionError(null);
+    setSaving(true);
+    try {
+      await api.delete(`/customers/${id}`);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -57,12 +80,14 @@ export default function Customers() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Customers</h2>
         <button
-          onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ name: "", email: "", phone: "", company: "" }); }}
+          onClick={() => { setShowForm(!showForm); setEditing(null); setActionError(null); setForm({ name: "", email: "", phone: "", company: "" }); }}
           className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto"
         >
           {showForm ? "Cancel" : "+ New Customer"}
         </button>
       </div>
+
+      <InlineError error={actionError} />
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -86,9 +111,10 @@ export default function Customers() {
           </div>
           <button
             onClick={handleSubmit}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
+            disabled={saving}
+            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {editing ? "Update" : "Create"}
+            {saving ? "Saving…" : editing ? "Update" : "Create"}
           </button>
         </div>
       )}
@@ -112,8 +138,8 @@ export default function Customers() {
                 <td className="px-4 py-3 text-gray-600">{c.phone || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{c.company || "—"}</td>
                 <td className="px-4 py-3 flex gap-2">
-                  <button onClick={() => handleEdit(c)} className="text-blue-600 hover:underline">Edit</button>
-                  <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
+                  <button disabled={saving} onClick={() => handleEdit(c)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
+                  <button disabled={saving} onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline disabled:opacity-50">Delete</button>
                 </td>
               </tr>
             ))}

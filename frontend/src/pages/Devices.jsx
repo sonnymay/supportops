@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { LoadingState, ErrorState } from "../components/AsyncState";
+import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -10,6 +10,8 @@ export default function Devices() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -31,21 +33,34 @@ export default function Devices() {
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
-    if (!form.serial_number) return alert("Serial number is required");
-    if (editing) {
-      await api.put(`/devices/${editing}`, form);
-    } else {
-      await api.post("/devices", form);
+    setActionError(null);
+    if (!form.serial_number.trim()) {
+      setActionError("Serial number is required.");
+      return;
     }
-    setForm({ serial_number: "", model: "", product_type: "", customer_id: "" });
-    setEditing(null);
-    setShowForm(false);
-    load();
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/devices/${editing}`, form);
+      } else {
+        await api.post("/devices", form);
+      }
+      setForm({ serial_number: "", model: "", product_type: "", customer_id: "" });
+      setEditing(null);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (d) => {
     setForm({ serial_number: d.serial_number, model: d.model || "", product_type: d.product_type || "", customer_id: d.customer_id || "" });
     setEditing(d.id);
+    setActionError(null);
     setShowForm(true);
   };
 
@@ -56,12 +71,14 @@ export default function Devices() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Devices</h2>
         <button
-          onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ serial_number: "", model: "", product_type: "", customer_id: "" }); }}
+          onClick={() => { setShowForm(!showForm); setEditing(null); setActionError(null); setForm({ serial_number: "", model: "", product_type: "", customer_id: "" }); }}
           className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto"
         >
           {showForm ? "Cancel" : "+ New Device"}
         </button>
       </div>
+
+      <InlineError error={actionError} />
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -91,9 +108,9 @@ export default function Devices() {
               </select>
             </div>
           </div>
-          <button onClick={handleSubmit}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            {editing ? "Update" : "Create"}
+          <button onClick={handleSubmit} disabled={saving}
+            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? "Saving…" : editing ? "Update" : "Create"}
           </button>
         </div>
       )}
@@ -117,7 +134,7 @@ export default function Devices() {
                 <td className="px-4 py-3 text-gray-600">{d.product_type || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{getCustomerName(d.customer_id)}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2">Edit</button>
+                  <button disabled={saving} onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2 disabled:opacity-50">Edit</button>
                 </td>
               </tr>
             ))}

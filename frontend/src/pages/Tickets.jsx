@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import AISuggestions from "../components/AISuggestions";
-import { LoadingState, ErrorState } from "../components/AsyncState";
+import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
 const STATUSES = ["Open", "In Progress", "Waiting on Customer", "Resolved", "Closed"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -37,6 +37,11 @@ export default function Tickets() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [actionError, setActionError] = useState(null);
+  const [detailError, setDetailError] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -59,15 +64,21 @@ export default function Tickets() {
 
   const loadDetail = async (t) => {
     setSelected(t);
+    setDetailError(null);
+    setDetailLoading(true);
+    setNotes([]);
+    setHistory([]);
     try {
-      const [n, h] = await Promise.all([
+      const [ticketNotes, ticketHistory] = await Promise.all([
         api.get(`/tickets/${t.id}/notes`),
         api.get(`/tickets/${t.id}/history`),
       ]);
-      setNotes(n);
-      setHistory(h);
+      setNotes(ticketNotes);
+      setHistory(ticketHistory);
     } catch (e) {
-      setError(e.message || String(e));
+      setDetailError(e.message || String(e));
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -77,33 +88,50 @@ export default function Tickets() {
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
-    if (!form.title) return alert("Title is required");
-    if (editing) {
-      await api.put(`/tickets/${editing}`, form);
-    } else {
-      await api.post("/tickets", form);
+    setActionError(null);
+    if (!form.title.trim()) {
+      setActionError("Title is required.");
+      return;
     }
-    setForm({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" });
-    setEditing(null);
-    setShowForm(false);
-    load();
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/tickets/${editing}`, form);
+      } else {
+        await api.post("/tickets", form);
+      }
+      setForm({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" });
+      setEditing(null);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (t) => {
     setForm({ title: t.title, description: t.description || "", status: t.status, priority: t.priority, customer_id: t.customer_id || "", device_id: t.device_id || "" });
     setEditing(t.id);
+    setActionError(null);
     setShowForm(true);
     setSelected(null);
   };
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
-    await api.post("/notes", { ticket_id: selected.id, note_text: newNote, created_by: "Agent" });
-    setNewNote("");
+    setDetailError(null);
+    setNoteSaving(true);
     try {
+      await api.post("/notes", { ticket_id: selected.id, note_text: newNote, created_by: "Agent" });
+      setNewNote("");
       setNotes(await api.get(`/tickets/${selected.id}/notes`));
     } catch (e) {
-      setError(e.message || String(e));
+      setDetailError(e.message || String(e));
+    } finally {
+      setNoteSaving(false);
     }
   };
 
@@ -133,6 +161,7 @@ export default function Tickets() {
   if (selected) return (
     <div>
       <button onClick={() => setSelected(null)} className="text-blue-600 hover:underline mb-4 text-sm">← Back to Tickets</button>
+      <InlineError error={detailError} />
       <div className="bg-white rounded-lg shadow p-6 mb-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -157,23 +186,25 @@ export default function Tickets() {
       {/* Notes */}
       <div className="bg-white rounded-lg shadow p-6 mb-4">
         <h3 className="font-semibold mb-3">Notes</h3>
-        {notes.length === 0 ? <p className="text-gray-400 text-sm">No notes yet</p> : notes.map(n => (
+        {detailLoading ? <p className="text-gray-400 text-sm">Loading notes…</p> : notes.length === 0 ? <p className="text-gray-400 text-sm">No notes yet</p> : notes.map(n => (
           <div key={n.id} className="border-b py-3 text-sm">
             <p>{n.note_text}</p>
             <p className="text-gray-400 text-xs mt-1">{n.created_by} · {new Date(n.created_at).toLocaleString()}</p>
           </div>
         ))}
         <div className="mt-4 flex gap-2">
-          <input className="flex-1 border rounded px-3 py-2 text-sm" placeholder="Add a note..."
+          <input disabled={noteSaving} className="min-w-0 flex-1 border rounded px-3 py-2 text-sm disabled:bg-gray-100" placeholder="Add a note..."
             value={newNote} onChange={e => setNewNote(e.target.value)} />
-          <button onClick={handleAddNote} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Add</button>
+          <button disabled={noteSaving || !newNote.trim()} onClick={handleAddNote} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm disabled:cursor-not-allowed disabled:opacity-50">
+            {noteSaving ? "Adding…" : "Add"}
+          </button>
         </div>
       </div>
 
       {/* History */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="font-semibold mb-3">Status History</h3>
-        {history.length === 0 ? <p className="text-gray-400 text-sm">No history yet</p> : history.map(h => (
+        {detailLoading ? <p className="text-gray-400 text-sm">Loading history…</p> : history.length === 0 ? <p className="text-gray-400 text-sm">No history yet</p> : history.map(h => (
           <div key={h.id} className="border-b py-2 text-sm flex gap-2 items-center">
             <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${statusColor(h.old_status)}`}>{h.old_status}</span>
             <span className="text-gray-400">→</span>
@@ -189,11 +220,13 @@ export default function Tickets() {
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Tickets</h2>
-        <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" }); }}
+        <button onClick={() => { setShowForm(!showForm); setEditing(null); setActionError(null); setForm({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" }); }}
           className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto">
           {showForm ? "Cancel" : "+ New Ticket"}
         </button>
       </div>
+
+      <InlineError error={actionError} />
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -240,8 +273,8 @@ export default function Tickets() {
               </select>
             </div>
           </div>
-          <button onClick={handleSubmit} className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            {editing ? "Update" : "Create"}
+          <button onClick={handleSubmit} disabled={saving} className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? "Saving…" : editing ? "Update" : "Create"}
           </button>
         </div>
       )}

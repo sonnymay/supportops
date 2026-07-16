@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { LoadingState, ErrorState } from "../components/AsyncState";
+import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
 export default function RMAs() {
   const [rmas, setRmas] = useState([]);
@@ -10,6 +10,8 @@ export default function RMAs() {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -31,22 +33,38 @@ export default function RMAs() {
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
-    if (!form.ticket_id) return alert("Ticket is required");
-    if (!form.rma_number) return alert("RMA number is required");
-    if (editing) {
-      await api.put(`/rmas/${editing}`, form);
-    } else {
-      await api.post("/rmas", form);
+    setActionError(null);
+    if (!form.ticket_id) {
+      setActionError("Ticket is required.");
+      return;
     }
-    setForm({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" });
-    setEditing(null);
-    setShowForm(false);
-    load();
+    if (!form.rma_number.trim()) {
+      setActionError("RMA number is required.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/rmas/${editing}`, form);
+      } else {
+        await api.post("/rmas", form);
+      }
+      setForm({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" });
+      setEditing(null);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (r) => {
     setForm({ ticket_id: r.ticket_id, rma_number: r.rma_number, serial_number: r.serial_number || "", shipping_status: r.shipping_status, resolution_status: r.resolution_status });
     setEditing(r.id);
+    setActionError(null);
     setShowForm(true);
   };
 
@@ -58,11 +76,13 @@ export default function RMAs() {
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">RMAs</h2>
-        <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" }); }}
+        <button onClick={() => { setShowForm(!showForm); setEditing(null); setActionError(null); setForm({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" }); }}
           className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto">
           {showForm ? "Cancel" : "+ New RMA"}
         </button>
       </div>
+
+      <InlineError error={actionError} />
 
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -101,8 +121,8 @@ export default function RMAs() {
               </select>
             </div>
           </div>
-          <button onClick={handleSubmit} className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            {editing ? "Update" : "Create"}
+          <button onClick={handleSubmit} disabled={saving} className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? "Saving…" : editing ? "Update" : "Create"}
           </button>
         </div>
       )}
@@ -127,7 +147,7 @@ export default function RMAs() {
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.shipping_status)}`}>{r.shipping_status}</span></td>
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.resolution_status)}`}>{r.resolution_status}</span></td>
                 <td className="px-4 py-3">
-                  <button onClick={() => handleEdit(r)} className="text-blue-600 hover:underline">Edit</button>
+                  <button disabled={saving} onClick={() => handleEdit(r)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
                 </td>
               </tr>
             ))}
