@@ -8,8 +8,7 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 DATABASE_UNAVAILABLE_DETAIL = (
-    "SupportOps database is unavailable. Check SUPABASE_URL, SUPABASE_KEY, "
-    "and Supabase table setup in Render."
+    "SupportOps data service is temporarily unavailable. It may be starting up; retry in a moment."
 )
 
 
@@ -57,13 +56,17 @@ def handle_response(response):
 
 def request_supabase(method, table, params="", data=None):
     query = f"?{params}" if params else ""
-    response = requests.request(
-        method,
-        f"{SUPABASE_URL}/rest/v1/{table}{query}",
-        headers=get_headers(),
-        json=data,
-        timeout=20,
-    )
+    try:
+        response = requests.request(
+            method,
+            f"{SUPABASE_URL}/rest/v1/{table}{query}",
+            headers=get_headers(),
+            json=data,
+            timeout=20,
+        )
+    except requests.RequestException as error:
+        raise DatabaseRequestError(DATABASE_UNAVAILABLE_DETAIL) from error
+
     return handle_response(response)
 
 

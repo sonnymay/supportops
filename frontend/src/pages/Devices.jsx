@@ -53,11 +53,11 @@ export default function Devices() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Devices</h2>
         <button
           onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ serial_number: "", model: "", product_type: "", customer_id: "" }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto"
         >
           {showForm ? "Cancel" : "+ New Device"}
         </button>
@@ -66,7 +66,7 @@ export default function Devices() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-semibold mb-4">{editing ? "Edit Device" : "New Device"}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm text-gray-600">Serial Number *</label>
               <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
@@ -98,8 +98,8 @@ export default function Devices() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               {["Serial Number", "Model", "Product Type", "Customer", "Actions"].map(h => (

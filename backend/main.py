@@ -30,7 +30,11 @@ def database_config_error(_request: Request, exc: DatabaseConfigError):
 
 @app.exception_handler(DatabaseRequestError)
 def database_request_error(_request: Request, exc: DatabaseRequestError):
-    return JSONResponse(status_code=503, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=503,
+        content={"detail": str(exc)},
+        headers={"Retry-After": "30"},
+    )
 
 
 # --- Models ---
@@ -104,6 +108,7 @@ def dependency_health(response: Response):
             reachable = True
         except (DatabaseConfigError, DatabaseRequestError) as error:
             response.status_code = 503
+            response.headers["Retry-After"] = "30"
             detail = str(error)
 
     return {

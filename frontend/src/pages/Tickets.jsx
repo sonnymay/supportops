@@ -110,18 +110,18 @@ export default function Tickets() {
     <div>
       <button onClick={() => setSelected(null)} className="text-blue-600 hover:underline mb-4 text-sm">← Back to Tickets</button>
       <div className="bg-white rounded-lg shadow p-6 mb-4">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-1">{selected.title}</h2>
             <p className="text-gray-500 text-sm mb-3">{selected.description || "No description"}</p>
             <div className="flex gap-2">
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor(selected.status)}`}>{selected.status}</span>
-              <span className={`text-xs px-2 py-1 rounded-full font-medium ${priorityColor(selected.priority)}`}>{selected.priority}</span>
+              <span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(selected.status)}`}>{selected.status}</span>
+              <span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${priorityColor(selected.priority)}`}>{selected.priority}</span>
             </div>
           </div>
           <button onClick={() => handleEdit(selected)} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">Edit Ticket</button>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-4 text-sm text-gray-600">
+        <div className="mt-4 grid grid-cols-1 gap-4 text-sm text-gray-600 sm:grid-cols-2">
           <p><span className="font-medium">Customer:</span> {getName(customers, selected.customer_id)}</p>
           <p><span className="font-medium">Device:</span> {devices.find(d => d.id === selected.device_id)?.serial_number || "—"}</p>
         </div>
@@ -151,9 +151,9 @@ export default function Tickets() {
         <h3 className="font-semibold mb-3">Status History</h3>
         {history.length === 0 ? <p className="text-gray-400 text-sm">No history yet</p> : history.map(h => (
           <div key={h.id} className="border-b py-2 text-sm flex gap-2 items-center">
-            <span className={`px-2 py-0.5 rounded-full text-xs ${statusColor(h.old_status)}`}>{h.old_status}</span>
+            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${statusColor(h.old_status)}`}>{h.old_status}</span>
             <span className="text-gray-400">→</span>
-            <span className={`px-2 py-0.5 rounded-full text-xs ${statusColor(h.new_status)}`}>{h.new_status}</span>
+            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${statusColor(h.new_status)}`}>{h.new_status}</span>
             <span className="text-gray-400 text-xs ml-auto">{new Date(h.changed_at).toLocaleString()}</span>
           </div>
         ))}
@@ -163,10 +163,10 @@ export default function Tickets() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Tickets</h2>
         <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto">
           {showForm ? "Cancel" : "+ New Ticket"}
         </button>
       </div>
@@ -174,13 +174,13 @@ export default function Tickets() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-semibold mb-4">{editing ? "Edit Ticket" : "New Ticket"}</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="md:col-span-2">
               <label className="text-sm text-gray-600">Title *</label>
               <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })} />
             </div>
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <label className="text-sm text-gray-600">Description</label>
               <textarea className="w-full border rounded px-3 py-2 mt-1 text-sm" rows={3} value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })} />
@@ -222,8 +222,8 @@ export default function Tickets() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               {["Title", "Status", "Priority", "Customer", "Actions"].map(h => (
@@ -237,8 +237,8 @@ export default function Tickets() {
             ) : tickets.map(t => (
               <tr key={t.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{t.title}</td>
-                <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor(t.status)}`}>{t.status}</span></td>
-                <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${priorityColor(t.priority)}`}>{t.priority}</span></td>
+                <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(t.status)}`}>{t.status}</span></td>
+                <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${priorityColor(t.priority)}`}>{t.priority}</span></td>
                 <td className="px-4 py-3 text-gray-600">{getName(customers, t.customer_id)}</td>
                 <td className="px-4 py-3">
                   <button onClick={() => loadDetail(t)} className="text-blue-600 hover:underline">View</button>

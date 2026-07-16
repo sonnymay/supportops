@@ -56,10 +56,10 @@ export default function RMAs() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">RMAs</h2>
         <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ ticket_id: "", rma_number: "", serial_number: "", shipping_status: "Pending", resolution_status: "Pending" }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto">
           {showForm ? "Cancel" : "+ New RMA"}
         </button>
       </div>
@@ -67,7 +67,7 @@ export default function RMAs() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-semibold mb-4">{editing ? "Edit RMA" : "New RMA"}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm text-gray-600">Ticket *</label>
               <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.ticket_id}
@@ -107,8 +107,8 @@ export default function RMAs() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               {["RMA Number", "Ticket", "Serial Number", "Shipping", "Resolution", "Actions"].map(h => (
@@ -124,8 +124,8 @@ export default function RMAs() {
                 <td className="px-4 py-3 font-mono font-medium">{r.rma_number}</td>
                 <td className="px-4 py-3 text-gray-600">{getTicketTitle(r.ticket_id)}</td>
                 <td className="px-4 py-3 text-gray-600">{r.serial_number || "—"}</td>
-                <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.shipping_status)}`}>{r.shipping_status}</span></td>
-                <td className="px-4 py-3"><span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.resolution_status)}`}>{r.resolution_status}</span></td>
+                <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.shipping_status)}`}>{r.shipping_status}</span></td>
+                <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.resolution_status)}`}>{r.resolution_status}</span></td>
                 <td className="px-4 py-3">
                   <button onClick={() => handleEdit(r)} className="text-blue-600 hover:underline">Edit</button>
                 </td>

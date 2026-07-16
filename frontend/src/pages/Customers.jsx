@@ -10,14 +10,16 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const load = () => {
+  const load = async () => {
     setLoading(true);
     setError(null);
-    return api
-      .get("/customers")
-      .then(setCustomers)
-      .catch((e) => setError(e.message || String(e)))
-      .finally(() => setLoading(false));
+    try {
+      setCustomers(await api.get("/customers"));
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
@@ -52,11 +54,11 @@ export default function Customers() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Customers</h2>
         <button
           onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ name: "", email: "", phone: "", company: "" }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto"
         >
           {showForm ? "Cancel" : "+ New Customer"}
         </button>
@@ -65,7 +67,7 @@ export default function Customers() {
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-semibold mb-4">{editing ? "Edit Customer" : "New Customer"}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {[
               { label: "Name *", key: "name" },
               { label: "Email", key: "email" },
@@ -91,8 +93,8 @@ export default function Customers() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               {["Name", "Email", "Phone", "Company", "Actions"].map(h => (

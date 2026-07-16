@@ -196,8 +196,26 @@ def test_dependency_health_returns_503_when_supabase_query_fails(client, monkeyp
     res = test_client.get("/health/dependencies")
 
     assert res.status_code == 503
+    assert res.headers["retry-after"] == "30"
     assert res.json()["status"] == "error"
     assert res.json()["supabase"]["reachable"] is False
+
+
+def test_data_route_returns_503_when_supabase_times_out(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(
+        main,
+        "db_get",
+        lambda table, params="": (_ for _ in ()).throw(
+            main.DatabaseRequestError("SupportOps data service is temporarily unavailable.")
+        ),
+    )
+
+    res = test_client.get("/customers")
+
+    assert res.status_code == 503
+    assert res.headers["retry-after"] == "30"
+    assert res.json()["detail"] == "SupportOps data service is temporarily unavailable."
 
 
 def test_get_ticket_not_found_returns_404(client, monkeypatch):

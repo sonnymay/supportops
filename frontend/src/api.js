@@ -9,7 +9,40 @@ if (!BASE) {
 // 90s — long enough for a Render free-tier cold start.
 const DEFAULT_TIMEOUT_MS = 90_000;
 
+export class ApiError extends Error {
+  constructor(message, status = 0) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+async function responseDetail(response) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const payload = await response.json().catch(() => null);
+    if (typeof payload?.detail === "string") return payload.detail;
+  }
+
+  return response.text().catch(() => "");
+}
+
+function apiErrorMessage(status, detail) {
+  if (status === 503) {
+    return "SupportOps is temporarily unavailable while its data service recovers. Wait a moment, then try again.";
+  }
+  if (status >= 500) {
+    return "SupportOps hit a server error. Try again in a moment.";
+  }
+  return detail || `Request failed with status ${status}.`;
+}
+
 async function request(path, { method = "GET", body, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  if (!BASE) {
+    throw new ApiError("SupportOps is missing its API configuration.");
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -22,17 +55,20 @@ async function request(path, { method = "GET", body, timeoutMs = DEFAULT_TIMEOUT
     });
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`${res.status} ${res.statusText}${text ? ` — ${text.slice(0, 200)}` : ""}`);
+      const detail = await responseDetail(res);
+      throw new ApiError(apiErrorMessage(res.status, detail), res.status);
     }
 
     if (res.status === 204) return null;
     return await res.json();
   } catch (err) {
     if (err.name === "AbortError") {
-      throw new Error(
-        "Request timed out. The demo backend runs on Render's free tier and may take up to a minute to wake from sleep — please retry."
+      throw new ApiError(
+        "SupportOps took too long to respond. The service may be waking up; please try again."
       );
+    }
+    if (err instanceof TypeError) {
+      throw new ApiError("SupportOps could not reach its API. Check your connection and try again.");
     }
     throw err;
   } finally {
@@ -61,17 +97,19 @@ export function useApiResource(path) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    api
-      .get(path)
-      .then((d) => {
-        setData(d);
-        setError(null);
-      })
-      .catch((e) => setError(e.message || String(e)))
-      .finally(() => setLoading(false));
+
+    try {
+      const result = await api.get(path);
+      setData(result);
+      setError(null);
+    } catch (error) {
+      setError(error.message || String(error));
+    } finally {
+      setLoading(false);
+    }
   }, [path]);
 
   useEffect(() => {
