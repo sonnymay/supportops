@@ -34,6 +34,9 @@ export default function Tickets() {
   const [form, setForm] = useState({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -105,6 +108,27 @@ export default function Tickets() {
   };
 
   const getName = (arr, id) => arr.find(x => x.id === id)?.name || "—";
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredTickets = tickets.filter((ticket) => {
+    const customer = customers.find((item) => item.id === ticket.customer_id);
+    const device = devices.find((item) => item.id === ticket.device_id);
+    const searchable = [
+      ticket.title,
+      ticket.description,
+      customer?.name,
+      device?.serial_number,
+      device?.model,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      (!normalizedQuery || searchable.includes(normalizedQuery)) &&
+      (!statusFilter || ticket.status === statusFilter) &&
+      (!priorityFilter || ticket.priority === priorityFilter)
+    );
+  });
 
   if (selected) return (
     <div>
@@ -222,6 +246,48 @@ export default function Tickets() {
         </div>
       )}
 
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px]">
+        <div>
+          <label htmlFor="ticket-search" className="sr-only">Search tickets</label>
+          <input
+            id="ticket-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search tickets, customers, or devices"
+            className="w-full border bg-white px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="ticket-status-filter" className="sr-only">Filter by status</label>
+          <select
+            id="ticket-status-filter"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="w-full border bg-white px-3 py-2 text-sm"
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((status) => <option key={status}>{status}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="ticket-priority-filter" className="sr-only">Filter by priority</label>
+          <select
+            id="ticket-priority-filter"
+            value={priorityFilter}
+            onChange={(event) => setPriorityFilter(event.target.value)}
+            className="w-full border bg-white px-3 py-2 text-sm"
+          >
+            <option value="">All priorities</option>
+            {PRIORITIES.map((priority) => <option key={priority}>{priority}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <p className="mb-2 text-xs text-gray-500" aria-live="polite">
+        Showing {filteredTickets.length} of {tickets.length} tickets
+      </p>
+
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
@@ -232,9 +298,13 @@ export default function Tickets() {
             </tr>
           </thead>
           <tbody>
-            {tickets.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No tickets yet</td></tr>
-            ) : tickets.map(t => (
+            {filteredTickets.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                  {tickets.length === 0 ? "No tickets yet" : "No tickets match these filters"}
+                </td>
+              </tr>
+            ) : filteredTickets.map(t => (
               <tr key={t.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{t.title}</td>
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(t.status)}`}>{t.status}</span></td>
