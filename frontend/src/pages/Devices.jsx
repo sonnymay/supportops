@@ -12,6 +12,7 @@ export default function Devices() {
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -65,6 +66,20 @@ export default function Devices() {
   };
 
   const getCustomerName = (id) => customers.find(c => c.id === id)?.name || "—";
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredDevices = devices.filter((device) => {
+    const customer = customers.find((item) => item.id === device.customer_id);
+    return [
+      device.serial_number,
+      device.model,
+      device.product_type,
+      customer?.name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery);
+  });
 
   return (
     <div>
@@ -115,6 +130,22 @@ export default function Devices() {
         </div>
       )}
 
+      <div className="mb-2">
+        <label htmlFor="device-search" className="sr-only">Search devices</label>
+        <input
+          id="device-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search serial numbers, models, product types, or customers"
+          className="w-full border bg-white px-3 py-2 text-sm"
+        />
+      </div>
+
+      <p className="mb-2 text-xs text-gray-500" aria-live="polite">
+        Showing {filteredDevices.length} of {devices.length} devices
+      </p>
+
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
@@ -125,9 +156,13 @@ export default function Devices() {
             </tr>
           </thead>
           <tbody>
-            {devices.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No devices yet</td></tr>
-            ) : devices.map(d => (
+            {filteredDevices.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                  {devices.length === 0 ? "No devices yet" : "No devices match this search"}
+                </td>
+              </tr>
+            ) : filteredDevices.map(d => (
               <tr key={d.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono font-medium">{d.serial_number}</td>
                 <td className="px-4 py-3 text-gray-600">{d.model || "—"}</td>

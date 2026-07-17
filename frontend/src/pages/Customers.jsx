@@ -11,6 +11,7 @@ export default function Customers() {
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -75,6 +76,15 @@ export default function Customers() {
     }
   };
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredCustomers = customers.filter((customer) =>
+    [customer.name, customer.email, customer.phone, customer.company]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery)
+  );
+
   return (
     <div>
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -119,6 +129,22 @@ export default function Customers() {
         </div>
       )}
 
+      <div className="mb-2">
+        <label htmlFor="customer-search" className="sr-only">Search customers</label>
+        <input
+          id="customer-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search customers, companies, email, or phone"
+          className="w-full border bg-white px-3 py-2 text-sm"
+        />
+      </div>
+
+      <p className="mb-2 text-xs text-gray-500" aria-live="polite">
+        Showing {filteredCustomers.length} of {customers.length} customers
+      </p>
+
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
@@ -129,9 +155,13 @@ export default function Customers() {
             </tr>
           </thead>
           <tbody>
-            {customers.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No customers yet</td></tr>
-            ) : customers.map(c => (
+            {filteredCustomers.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                  {customers.length === 0 ? "No customers yet" : "No customers match this search"}
+                </td>
+              </tr>
+            ) : filteredCustomers.map(c => (
               <tr key={c.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{c.name}</td>
                 <td className="px-4 py-3 text-gray-600">{c.email || "—"}</td>
