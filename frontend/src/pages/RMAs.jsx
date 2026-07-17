@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
+const SHIPPING_STATUSES = ["Pending", "Shipped", "Delivered", "Returned"];
+const RESOLUTION_STATUSES = ["Pending", "In Progress", "Completed", "Cancelled"];
+
 export default function RMAs() {
   const [rmas, setRmas] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -12,6 +15,9 @@ export default function RMAs() {
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [shippingFilter, setShippingFilter] = useState("");
+  const [resolutionFilter, setResolutionFilter] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -71,6 +77,22 @@ export default function RMAs() {
   const getTicketTitle = (id) => tickets.find(t => t.id === id)?.title || "—";
 
   const statusColor = (s) => s === "Pending" ? "bg-yellow-100 text-yellow-700" : s === "Completed" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
+  const shippingStatuses = [...new Set([...SHIPPING_STATUSES, ...rmas.map((rma) => rma.shipping_status).filter(Boolean)])];
+  const resolutionStatuses = [...new Set([...RESOLUTION_STATUSES, ...rmas.map((rma) => rma.resolution_status).filter(Boolean)])];
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredRmas = rmas.filter((rma) => {
+    const ticket = tickets.find((item) => item.id === rma.ticket_id);
+    const searchable = [rma.rma_number, rma.serial_number, ticket?.title]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      (!normalizedQuery || searchable.includes(normalizedQuery)) &&
+      (!shippingFilter || rma.shipping_status === shippingFilter) &&
+      (!resolutionFilter || rma.resolution_status === resolutionFilter)
+    );
+  });
 
   return (
     <div>
@@ -110,14 +132,14 @@ export default function RMAs() {
               <label className="text-sm text-gray-600">Shipping Status</label>
               <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.shipping_status}
                 onChange={e => setForm({ ...form, shipping_status: e.target.value })}>
-                {["Pending", "Shipped", "Delivered", "Returned"].map(s => <option key={s}>{s}</option>)}
+                {shippingStatuses.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
               <label className="text-sm text-gray-600">Resolution Status</label>
               <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.resolution_status}
                 onChange={e => setForm({ ...form, resolution_status: e.target.value })}>
-                {["Pending", "In Progress", "Completed", "Cancelled"].map(s => <option key={s}>{s}</option>)}
+                {resolutionStatuses.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
           </div>
@@ -126,6 +148,48 @@ export default function RMAs() {
           </button>
         </div>
       )}
+
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+        <div>
+          <label htmlFor="rma-search" className="sr-only">Search RMAs</label>
+          <input
+            id="rma-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search RMA numbers, serial numbers, or tickets"
+            className="w-full border bg-white px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="rma-shipping-filter" className="sr-only">Filter by shipping status</label>
+          <select
+            id="rma-shipping-filter"
+            value={shippingFilter}
+            onChange={(event) => setShippingFilter(event.target.value)}
+            className="w-full border bg-white px-3 py-2 text-sm"
+          >
+            <option value="">All shipping</option>
+            {shippingStatuses.map((status) => <option key={status}>{status}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="rma-resolution-filter" className="sr-only">Filter by resolution status</label>
+          <select
+            id="rma-resolution-filter"
+            value={resolutionFilter}
+            onChange={(event) => setResolutionFilter(event.target.value)}
+            className="w-full border bg-white px-3 py-2 text-sm"
+          >
+            <option value="">All resolutions</option>
+            {resolutionStatuses.map((status) => <option key={status}>{status}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <p className="mb-2 text-xs text-gray-500" aria-live="polite">
+        Showing {filteredRmas.length} of {rmas.length} RMAs
+      </p>
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="w-full min-w-[820px] text-sm">
@@ -137,9 +201,13 @@ export default function RMAs() {
             </tr>
           </thead>
           <tbody>
-            {rmas.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-400">No RMAs yet</td></tr>
-            ) : rmas.map(r => (
+            {filteredRmas.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-6 text-center text-gray-400">
+                  {rmas.length === 0 ? "No RMAs yet" : "No RMAs match these filters"}
+                </td>
+              </tr>
+            ) : filteredRmas.map(r => (
               <tr key={r.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono font-medium">{r.rma_number}</td>
                 <td className="px-4 py-3 text-gray-600">{getTicketTitle(r.ticket_id)}</td>
