@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { LoadingState, ErrorState } from "../components/AsyncState";
+import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
 export default function Devices() {
   const [devices, setDevices] = useState([]);
@@ -10,6 +10,9 @@ export default function Devices() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -31,42 +34,71 @@ export default function Devices() {
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const handleSubmit = async () => {
-    if (!form.serial_number) return alert("Serial number is required");
-    if (editing) {
-      await api.put(`/devices/${editing}`, form);
-    } else {
-      await api.post("/devices", form);
+    setActionError(null);
+    if (!form.serial_number.trim()) {
+      setActionError("Serial number is required.");
+      return;
     }
-    setForm({ serial_number: "", model: "", product_type: "", customer_id: "" });
-    setEditing(null);
-    setShowForm(false);
-    load();
+
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.put(`/devices/${editing}`, form);
+      } else {
+        await api.post("/devices", form);
+      }
+      setForm({ serial_number: "", model: "", product_type: "", customer_id: "" });
+      setEditing(null);
+      setShowForm(false);
+      await load();
+    } catch (e) {
+      setActionError(e.message || String(e));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (d) => {
     setForm({ serial_number: d.serial_number, model: d.model || "", product_type: d.product_type || "", customer_id: d.customer_id || "" });
     setEditing(d.id);
+    setActionError(null);
     setShowForm(true);
   };
 
   const getCustomerName = (id) => customers.find(c => c.id === id)?.name || "—";
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredDevices = devices.filter((device) => {
+    const customer = customers.find((item) => item.id === device.customer_id);
+    return [
+      device.serial_number,
+      device.model,
+      device.product_type,
+      customer?.name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(normalizedQuery);
+  });
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold">Devices</h2>
         <button
-          onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ serial_number: "", model: "", product_type: "", customer_id: "" }); }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          onClick={() => { setShowForm(!showForm); setEditing(null); setActionError(null); setForm({ serial_number: "", model: "", product_type: "", customer_id: "" }); }}
+          className="self-start bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:self-auto"
         >
           {showForm ? "Cancel" : "+ New Device"}
         </button>
       </div>
 
+      <InlineError error={actionError} />
+
       {showForm && (
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h3 className="font-semibold mb-4">{editing ? "Edit Device" : "New Device"}</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="text-sm text-gray-600">Serial Number *</label>
               <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
@@ -91,15 +123,31 @@ export default function Devices() {
               </select>
             </div>
           </div>
-          <button onClick={handleSubmit}
-            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            {editing ? "Update" : "Create"}
+          <button onClick={handleSubmit} disabled={saving}
+            className="mt-4 bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? "Saving…" : editing ? "Update" : "Create"}
           </button>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="mb-2">
+        <label htmlFor="device-search" className="sr-only">Search devices</label>
+        <input
+          id="device-search"
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search serial numbers, models, product types, or customers"
+          className="w-full border bg-white px-3 py-2 text-sm"
+        />
+      </div>
+
+      <p className="mb-2 text-xs text-gray-500" aria-live="polite">
+        Showing {filteredDevices.length} of {devices.length} devices
+      </p>
+
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
               {["Serial Number", "Model", "Product Type", "Customer", "Actions"].map(h => (
@@ -108,16 +156,20 @@ export default function Devices() {
             </tr>
           </thead>
           <tbody>
-            {devices.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No devices yet</td></tr>
-            ) : devices.map(d => (
+            {filteredDevices.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-400">
+                  {devices.length === 0 ? "No devices yet" : "No devices match this search"}
+                </td>
+              </tr>
+            ) : filteredDevices.map(d => (
               <tr key={d.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono font-medium">{d.serial_number}</td>
                 <td className="px-4 py-3 text-gray-600">{d.model || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{d.product_type || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{getCustomerName(d.customer_id)}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2">Edit</button>
+                  <button disabled={saving} onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2 disabled:opacity-50">Edit</button>
                 </td>
               </tr>
             ))}

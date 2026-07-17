@@ -76,5 +76,17 @@ def test_supabase_http_error_raises_database_error(monkeypatch):
     fake_response.raise_for_status.side_effect = requests.HTTPError("503")
     monkeypatch.setattr(database.requests, "request", MagicMock(return_value=fake_response))
 
-    with pytest.raises(database.DatabaseRequestError, match="SupportOps database is unavailable"):
+    with pytest.raises(database.DatabaseRequestError, match="temporarily unavailable"):
+        database.db_get("tickets")
+
+
+@pytest.mark.parametrize(
+    "error", [requests.Timeout("timed out"), requests.ConnectionError("offline")]
+)
+def test_supabase_network_error_raises_database_error(monkeypatch, error):
+    monkeypatch.setattr(database, "SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setattr(database, "SUPABASE_KEY", "secret")
+    monkeypatch.setattr(database.requests, "request", MagicMock(side_effect=error))
+
+    with pytest.raises(database.DatabaseRequestError, match="temporarily unavailable"):
         database.db_get("tickets")

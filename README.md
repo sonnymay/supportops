@@ -163,7 +163,9 @@ App runs at `http://localhost:5173`.
 - **Frontend** — Vercel, SPA rewrites in `frontend/vercel.json`. Env: `VITE_API_BASE_URL`.
 - **Backend** — Render web service from `render.yaml` at repo root. Python 3.11.9. Env: `SUPABASE_URL`, `SUPABASE_KEY`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`. Health check: `/health`.
 
-Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend on app load — see `frontend/src/api.js` (`warmupBackend`).
+Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend on app load, and `.github/workflows/keepalive.yml` runs a daily dependency check to keep the free Supabase project active and catch outages early.
+
+`GET /health` confirms the API process is running. `GET /health/dependencies` performs a real database query and returns `503` with a `Retry-After` header when Supabase is unavailable.
 
 ---
 
