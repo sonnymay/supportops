@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import AISuggestions from "../components/AISuggestions";
 import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
@@ -34,9 +35,7 @@ export default function Tickets() {
   const [form, setForm] = useState({ title: "", description: "", status: "Open", priority: "Medium", customer_id: "", device_id: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [actionError, setActionError] = useState(null);
   const [detailError, setDetailError] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -136,6 +135,18 @@ export default function Tickets() {
   };
 
   const getName = (arr, id) => arr.find(x => x.id === id)?.name || "—";
+  const query = searchParams.get("q") || "";
+  const statusFilter = STATUSES.includes(searchParams.get("status")) ? searchParams.get("status") : "";
+  const priorityFilter = PRIORITIES.includes(searchParams.get("priority")) ? searchParams.get("priority") : "";
+  const hasActiveFilters = Boolean(query || statusFilter || priorityFilter);
+  const updateFilter = (key, value) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    }, { replace: true });
+  };
   const normalizedQuery = query.trim().toLowerCase();
   const filteredTickets = tickets.filter((ticket) => {
     const customer = customers.find((item) => item.id === ticket.customer_id);
@@ -279,14 +290,14 @@ export default function Tickets() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px]">
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_160px_auto]">
         <div>
           <label htmlFor="ticket-search" className="sr-only">Search tickets</label>
           <input
             id="ticket-search"
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => updateFilter("q", event.target.value)}
             placeholder="Search tickets, customers, or devices"
             className="w-full border bg-white px-3 py-2 text-sm"
           />
@@ -296,7 +307,7 @@ export default function Tickets() {
           <select
             id="ticket-status-filter"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => updateFilter("status", event.target.value)}
             className="w-full border bg-white px-3 py-2 text-sm"
           >
             <option value="">All statuses</option>
@@ -308,13 +319,21 @@ export default function Tickets() {
           <select
             id="ticket-priority-filter"
             value={priorityFilter}
-            onChange={(event) => setPriorityFilter(event.target.value)}
+            onChange={(event) => updateFilter("priority", event.target.value)}
             className="w-full border bg-white px-3 py-2 text-sm"
           >
             <option value="">All priorities</option>
             {PRIORITIES.map((priority) => <option key={priority}>{priority}</option>)}
           </select>
         </div>
+        <button
+          type="button"
+          disabled={!hasActiveFilters}
+          onClick={() => setSearchParams({}, { replace: true })}
+          className="border bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Clear filters
+        </button>
       </div>
 
       <p className="mb-2 text-xs text-gray-500" aria-live="polite">
