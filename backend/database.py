@@ -1,9 +1,35 @@
 import os
+import re
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Characters that are structural in PostgREST filter syntax: backslash (the escape
+# character itself), comma (separates conditions inside or()/and()), and parentheses
+# (delimit logical groups).
+_POSTGREST_RESERVED = re.compile(r"[\\,()]")
+
+
+def escape_filter_value(value: str) -> str:
+    """Make a user-supplied value safe to interpolate into a PostgREST filter string.
+
+    Two layers of protection:
+
+    1. Backslash-escape PostgREST's reserved characters (``\\``, ``,``, ``(``, ``)``)
+       so the value cannot terminate an ``or=(...)`` group or add extra conditions.
+    2. Percent-encode the result with ``safe=""`` so ``&``, ``=``, and everything else
+       that is meaningful in a query string is sent literally rather than being parsed
+       as additional parameters.
+
+    The caller is responsible for the surrounding template (operators, ``*`` wildcards,
+    ``&order=`` etc.) -- only the untrusted value goes through this function.
+    """
+    escaped = _POSTGREST_RESERVED.sub(lambda m: "\\" + m.group(0), value)
+    return quote(escaped, safe="")
+
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")

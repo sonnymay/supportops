@@ -6,6 +6,7 @@ with no Supabase connection or API keys required.
 import sys
 import types
 from unittest.mock import MagicMock
+from urllib.parse import quote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -148,6 +149,46 @@ def test_filter_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
 
     assert res.status_code == 200
     assert res.json() == []
+
+
+def test_search_tickets_escapes_postgrest_injection(client, monkeypatch):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    # Attempt to close the or() group, append a condition, and inject a limit param.
+    payload = quote("x),status.eq.Closed&limit=1", safe="")
+    res = test_client.get(f"/tickets/search?q={payload}")
+
+    assert res.status_code == 200
+    params = captured["params"]
+    assert params.count("&") == 1, params
+    assert params.endswith("&order=created_at.desc")
+    assert "),status" not in params
+    assert "limit=1" not in params
+
+
+def test_filter_tickets_escapes_postgrest_injection(client, monkeypatch):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    payload = quote("u2&limit=1", safe="")
+    res = test_client.get(f"/tickets/filter?assigned_user_id={payload}")
+
+    assert res.status_code == 200
+    assert "&limit=1" not in captured["params"]
+    assert captured["params"].endswith("&order=created_at.desc")
 
 
 def test_health_returns_ok(client):
