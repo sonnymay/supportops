@@ -112,3 +112,30 @@ def test_escape_filter_value_never_leaves_reserved_chars_unescaped():
 def test_escape_filter_value_backslash_escapes_then_percent_encodes():
     escaped = database.escape_filter_value("a,b(c)d\\e")
     assert unquote(escaped) == "a\\,b\\(c\\)d\\\\e"
+
+
+# ---------------------------------------------------------------------------
+# db_patch / db_delete -- id path parameter is escaped
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("helper", ["db_patch", "db_delete"])
+def test_id_helpers_escape_injected_query_params(monkeypatch, helper):
+    monkeypatch.setattr(database, "SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setattr(database, "SUPABASE_KEY", "secret")
+    fake_response = MagicMock()
+    fake_response.status_code = 204
+    fake_response.text = ""
+    fake_request = MagicMock(return_value=fake_response)
+    monkeypatch.setattr(database.requests, "request", fake_request)
+
+    malicious_id = "t1&status=eq.Closed"
+    if helper == "db_patch":
+        database.db_patch("tickets", malicious_id, {"title": "x"})
+    else:
+        database.db_delete("tickets", malicious_id)
+
+    url = fake_request.call_args.args[1]
+    assert url.count("&") == 0, url
+    assert "status=eq.Closed" not in url
+    assert url.endswith("/rest/v1/tickets?id=eq." + database.escape_filter_value(malicious_id))

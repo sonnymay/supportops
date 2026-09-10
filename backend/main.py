@@ -217,7 +217,7 @@ def filter_tickets(
 
 @app.get("/tickets/{id}")
 def get_ticket(id: str):
-    result = db_get("tickets", f"id=eq.{id}")
+    result = db_get("tickets", f"id=eq.{escape_filter_value(id)}")
     if not result:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return result[0]
@@ -234,7 +234,7 @@ def create_ticket(t: Ticket):
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
-    old = db_get("tickets", f"id=eq.{id}&select=status")
+    old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
     result = db_patch("tickets", id, data)
     if old and old[0]["status"] != data["status"]:
         db_post(
@@ -252,7 +252,7 @@ def update_ticket(id: str, t: Ticket):
 # --- Notes ---
 @app.get("/tickets/{id}/notes")
 def get_notes(id: str):
-    return db_get("ticket_notes", f"ticket_id=eq.{id}&order=created_at.asc")
+    return db_get("ticket_notes", f"ticket_id=eq.{escape_filter_value(id)}&order=created_at.asc")
 
 
 @app.post("/notes")
@@ -263,7 +263,7 @@ def create_note(n: TicketNote):
 # --- History ---
 @app.get("/tickets/{id}/history")
 def get_history(id: str):
-    return db_get("ticket_history", f"ticket_id=eq.{id}&order=changed_at.asc")
+    return db_get("ticket_history", f"ticket_id=eq.{escape_filter_value(id)}&order=changed_at.asc")
 
 
 # --- RMAs ---

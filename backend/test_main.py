@@ -191,6 +191,54 @@ def test_filter_tickets_escapes_postgrest_injection(client, monkeypatch):
     assert captured["params"].endswith("&order=created_at.desc")
 
 
+@pytest.mark.parametrize(
+    "path_template",
+    ["/tickets/{id}", "/tickets/{id}/notes", "/tickets/{id}/history"],
+)
+def test_ticket_id_routes_escape_postgrest_injection(client, monkeypatch, path_template):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return [{"id": "t1"}]
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    # A crafted id that tries to append an extra filter / parameter.
+    payload = quote("t1&status=eq.Closed", safe="")
+    res = test_client.get(path_template.format(id=payload))
+
+    assert res.status_code == 200
+    params = captured["params"]
+    assert "&status=eq.Closed" not in params
+    # Only the template's own "&order=" (if any) may remain.
+    assert params.count("&") <= 1, params
+
+
+def test_update_ticket_escapes_id_in_status_lookup(client, monkeypatch):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["get_params"] = params
+        return [{"status": "Open"}]
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+    monkeypatch.setattr(main, "db_patch", lambda table, id, data: [{"id": id, **data}])
+    monkeypatch.setattr(main, "db_post", lambda table, data: [data])
+
+    payload = quote("t1&status=eq.Closed", safe="")
+    res = test_client.put(
+        f"/tickets/{payload}",
+        json={"title": "Printer", "status": "Open", "priority": "Low"},
+    )
+
+    assert res.status_code == 200
+    assert "&status=eq.Closed" not in captured["get_params"]
+    assert captured["get_params"].endswith("&select=status")
+
+
 def test_health_returns_ok(client):
     test_client, _ = client
     res = test_client.get("/health")
