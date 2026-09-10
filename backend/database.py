@@ -99,8 +99,8 @@ def db_post(table, data):
 
 
 def db_patch(table, id, data):
-    return request_supabase("PATCH", table, params=f"id=eq.{id}", data=data)
+    return request_supabase("PATCH", table, params=f"id=eq.{escape_filter_value(id)}", data=data)
 
 
 def db_delete(table, id):
-    return request_supabase("DELETE", table, params=f"id=eq.{id}")
+    return request_supabase("DELETE", table, params=f"id=eq.{escape_filter_value(id)}")
