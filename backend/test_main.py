@@ -6,6 +6,7 @@ with no Supabase connection or API keys required.
 import sys
 import types
 from unittest.mock import MagicMock
+from urllib.parse import quote, unquote
 
 import pytest
 from fastapi.testclient import TestClient
@@ -51,7 +52,9 @@ def test_search_tickets_returns_matching_rows(client, monkeypatch):
     assert res.status_code == 200
     assert res.json() == rows
     assert captured["table"] == "tickets"
-    assert "printer" in captured["params"].lower()
+    assert captured["params"] == (
+        "or=(title.ilike.%22*printer*%22,description.ilike.%22*printer*%22)&order=created_at.desc"
+    )
 
 
 def test_search_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
@@ -148,6 +151,48 @@ def test_filter_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
 
     assert res.status_code == 200
     assert res.json() == []
+
+
+def test_search_tickets_escapes_postgrest_injection(client, monkeypatch):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    # Backslashes do not protect logical delimiters unless the value is quoted.
+    payload = quote("x),status.like.Closed&limit=1", safe="")
+    res = test_client.get(f"/tickets/search?q={payload}")
+
+    assert res.status_code == 200
+    params = captured["params"]
+    assert params.count("&") == 1, params
+    assert params.endswith("&order=created_at.desc")
+    logical_filter = unquote(params.removesuffix("&order=created_at.desc"))
+    assert logical_filter == (
+        'or=(title.ilike."*x),status.like.Closed&limit=1*",'
+        'description.ilike."*x),status.like.Closed&limit=1*")'
+    )
+
+
+def test_filter_tickets_escapes_postgrest_injection(client, monkeypatch):
+    test_client, main = client
+    captured = {}
+
+    def fake_get(table, params=""):
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(main, "db_get", fake_get)
+
+    payload = quote("u2&limit=1", safe="")
+    res = test_client.get(f"/tickets/filter?assigned_user_id={payload}")
+
+    assert res.status_code == 200
+    assert captured["params"] == ("assigned_user_id=eq.u2%26limit%3D1&order=created_at.desc")
 
 
 def test_health_returns_ok(client):

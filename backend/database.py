@@ -1,9 +1,29 @@
 import os
+from urllib.parse import quote
 
 import requests
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def escape_filter_value(value: str, *, wildcard: bool = False) -> str:
+    """Make a user-supplied value safe to interpolate into a PostgREST filter string.
+
+    The value is percent-encoded so query-string delimiters cannot create new
+    parameters.
+
+    ``wildcard=True`` additionally quotes the complete ``*value*`` pattern for use
+    inside a PostgREST logical expression. Embedded backslashes and double quotes
+    are escaped within that quoted value, so commas and parentheses cannot terminate
+    an ``or=(...)`` expression. Operators and other template structure remain the
+    caller's responsibility.
+    """
+    if wildcard:
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return quote(f'"*{escaped}*"', safe="*")
+    return quote(value, safe="")
+
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")

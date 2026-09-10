@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock
+from urllib.parse import unquote
 
 import pytest
 import requests
@@ -90,3 +91,29 @@ def test_supabase_network_error_raises_database_error(monkeypatch, error):
 
     with pytest.raises(database.DatabaseRequestError, match="temporarily unavailable"):
         database.db_get("tickets")
+
+
+# ---------------------------------------------------------------------------
+# escape_filter_value -- PostgREST filter injection guard
+# ---------------------------------------------------------------------------
+
+
+def test_escape_filter_value_passes_plain_text_through():
+    assert database.escape_filter_value("printer") == "printer"
+    assert database.escape_filter_value("agent-7") == "agent-7"
+    assert (
+        database.escape_filter_value("123e4567-e89b-12d3-a456-426614174000")
+        == "123e4567-e89b-12d3-a456-426614174000"
+    )
+
+
+def test_escape_filter_value_percent_encodes_query_delimiters():
+    escaped = database.escape_filter_value("x,status.like.Closed&select=*&path=/tickets")
+
+    assert escaped == "x%2Cstatus.like.Closed%26select%3D%2A%26path%3D%2Ftickets"
+
+
+def test_escape_filter_value_quotes_and_escapes_wildcard_pattern():
+    escaped = database.escape_filter_value('a,b("c\\d")', wildcard=True)
+
+    assert unquote(escaped) == '"*a,b(\\"c\\\\d\\")*"'

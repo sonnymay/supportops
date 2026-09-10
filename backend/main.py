@@ -5,7 +5,15 @@ from pydantic import BaseModel
 
 import ai
 import database
-from database import DatabaseConfigError, DatabaseRequestError, db_delete, db_get, db_patch, db_post
+from database import (
+    DatabaseConfigError,
+    DatabaseRequestError,
+    db_delete,
+    db_get,
+    db_patch,
+    db_post,
+    escape_filter_value,
+)
 
 app = FastAPI(title="SupportOps API")
 
@@ -172,10 +180,10 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
     Returns tickets where the term appears in title OR description, sorted by
     most recently created first.
     """
-    term = q.strip()
+    term = escape_filter_value(q.strip(), wildcard=True)
     results = db_get(
         "tickets",
-        f"or=(title.ilike.*{term}*,description.ilike.*{term}*)&order=created_at.desc",
+        f"or=(title.ilike.{term},description.ilike.{term})&order=created_at.desc",
     )
     return results if isinstance(results, list) else []
 
@@ -196,11 +204,11 @@ def filter_tickets(
     """
     parts: list[str] = []
     if status:
-        parts.append(f"status=eq.{status}")
+        parts.append(f"status=eq.{escape_filter_value(status)}")
     if priority:
-        parts.append(f"priority=eq.{priority}")
+        parts.append(f"priority=eq.{escape_filter_value(priority)}")
     if assigned_user_id:
-        parts.append(f"assigned_user_id=eq.{assigned_user_id}")
+        parts.append(f"assigned_user_id=eq.{escape_filter_value(assigned_user_id)}")
     parts.append("order=created_at.desc")
     query = "&".join(parts)
     results = db_get("tickets", query)

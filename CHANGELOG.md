@@ -7,6 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- `GET /tickets/search` and `GET /tickets/filter` no longer interpolate raw user input into PostgREST filter strings. Reserved logical-filter values are now quoted with embedded backslashes and quotes escaped, and all values are percent-encoded, so a crafted `q`, `status`, `priority`, or `assigned_user_id` can no longer break out of the intended filter or inject extra query parameters.
+
 ### Planned
 - Role-based auth (agent / lead / admin) with JWT bearer tokens
 - SLA timers with breach alerts
