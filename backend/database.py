@@ -1,5 +1,4 @@
 import os
-import re
 from urllib.parse import quote
 
 import requests
@@ -7,28 +6,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Characters that are structural in PostgREST filter syntax: backslash (the escape
-# character itself), comma (separates conditions inside or()/and()), and parentheses
-# (delimit logical groups).
-_POSTGREST_RESERVED = re.compile(r"[\\,()]")
 
-
-def escape_filter_value(value: str) -> str:
+def escape_filter_value(value: str, *, wildcard: bool = False) -> str:
     """Make a user-supplied value safe to interpolate into a PostgREST filter string.
 
-    Two layers of protection:
+    The value is percent-encoded so query-string delimiters cannot create new
+    parameters.
 
-    1. Backslash-escape PostgREST's reserved characters (``\\``, ``,``, ``(``, ``)``)
-       so the value cannot terminate an ``or=(...)`` group or add extra conditions.
-    2. Percent-encode the result with ``safe=""`` so ``&``, ``=``, and everything else
-       that is meaningful in a query string is sent literally rather than being parsed
-       as additional parameters.
-
-    The caller is responsible for the surrounding template (operators, ``*`` wildcards,
-    ``&order=`` etc.) -- only the untrusted value goes through this function.
+    ``wildcard=True`` additionally quotes the complete ``*value*`` pattern for use
+    inside a PostgREST logical expression. Embedded backslashes and double quotes
+    are escaped within that quoted value, so commas and parentheses cannot terminate
+    an ``or=(...)`` expression. Operators and other template structure remain the
+    caller's responsibility.
     """
-    escaped = _POSTGREST_RESERVED.sub(lambda m: "\\" + m.group(0), value)
-    return quote(escaped, safe="")
+    if wildcard:
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return quote(f'"*{escaped}*"', safe="*")
+    return quote(value, safe="")
 
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")

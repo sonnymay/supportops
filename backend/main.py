@@ -180,10 +180,10 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
     Returns tickets where the term appears in title OR description, sorted by
     most recently created first.
     """
-    term = escape_filter_value(q.strip())
+    term = escape_filter_value(q.strip(), wildcard=True)
     results = db_get(
         "tickets",
-        f"or=(title.ilike.*{term}*,description.ilike.*{term}*)&order=created_at.desc",
+        f"or=(title.ilike.{term},description.ilike.{term})&order=created_at.desc",
     )
     return results if isinstance(results, list) else []
 

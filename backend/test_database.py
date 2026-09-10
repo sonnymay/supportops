@@ -101,17 +101,22 @@ def test_supabase_network_error_raises_database_error(monkeypatch, error):
 def test_escape_filter_value_passes_plain_text_through():
     assert database.escape_filter_value("printer") == "printer"
     assert database.escape_filter_value("agent-7") == "agent-7"
+    assert (
+        database.escape_filter_value("123e4567-e89b-12d3-a456-426614174000")
+        == "123e4567-e89b-12d3-a456-426614174000"
+    )
 
 
-def test_escape_filter_value_never_leaves_reserved_chars_unescaped():
-    escaped = database.escape_filter_value("\\,()&=")
-    for char in "\\,()&=":
-        assert char not in escaped, f"{char!r} survived unescaped in {escaped!r}"
+def test_escape_filter_value_percent_encodes_query_delimiters():
+    escaped = database.escape_filter_value("x,status.like.Closed&select=*&path=/tickets")
+
+    assert escaped == "x%2Cstatus.like.Closed%26select%3D%2A%26path%3D%2Ftickets"
 
 
-def test_escape_filter_value_backslash_escapes_then_percent_encodes():
-    escaped = database.escape_filter_value("a,b(c)d\\e")
-    assert unquote(escaped) == "a\\,b\\(c\\)d\\\\e"
+def test_escape_filter_value_quotes_and_escapes_wildcard_pattern():
+    escaped = database.escape_filter_value('a,b("c\\d")', wildcard=True)
+
+    assert unquote(escaped) == '"*a,b(\\"c\\\\d\\")*"'
 
 
 # ---------------------------------------------------------------------------
