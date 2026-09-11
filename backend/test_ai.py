@@ -3,7 +3,6 @@ import pytest
 import ai
 import database
 
-
 # ---------------------------------------------------------------------------
 # _fetch_ticket / _fetch_notes -- PostgREST filter injection guard
 #
