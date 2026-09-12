@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
 
@@ -15,9 +16,7 @@ export default function RMAs() {
   const [error, setError] = useState(null);
   const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [query, setQuery] = useState("");
-  const [shippingFilter, setShippingFilter] = useState("");
-  const [resolutionFilter, setResolutionFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const load = async () => {
     setLoading(true);
@@ -79,6 +78,18 @@ export default function RMAs() {
   const statusColor = (s) => s === "Pending" ? "bg-yellow-100 text-yellow-700" : s === "Completed" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
   const shippingStatuses = [...new Set([...SHIPPING_STATUSES, ...rmas.map((rma) => rma.shipping_status).filter(Boolean)])];
   const resolutionStatuses = [...new Set([...RESOLUTION_STATUSES, ...rmas.map((rma) => rma.resolution_status).filter(Boolean)])];
+  const query = searchParams.get("q") || "";
+  const shippingFilter = shippingStatuses.includes(searchParams.get("shipping")) ? searchParams.get("shipping") : "";
+  const resolutionFilter = resolutionStatuses.includes(searchParams.get("resolution")) ? searchParams.get("resolution") : "";
+  const hasActiveFilters = Boolean(query || shippingFilter || resolutionFilter);
+  const updateFilter = (key, value) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    }, { replace: true });
+  };
   const normalizedQuery = query.trim().toLowerCase();
   const filteredRmas = rmas.filter((rma) => {
     const ticket = tickets.find((item) => item.id === rma.ticket_id);
@@ -149,14 +160,14 @@ export default function RMAs() {
         </div>
       )}
 
-      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px]">
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_180px_auto]">
         <div>
           <label htmlFor="rma-search" className="sr-only">Search RMAs</label>
           <input
             id="rma-search"
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => updateFilter("q", event.target.value)}
             placeholder="Search RMA numbers, serial numbers, or tickets"
             className="w-full border bg-white px-3 py-2 text-sm"
           />
@@ -166,7 +177,7 @@ export default function RMAs() {
           <select
             id="rma-shipping-filter"
             value={shippingFilter}
-            onChange={(event) => setShippingFilter(event.target.value)}
+            onChange={(event) => updateFilter("shipping", event.target.value)}
             className="w-full border bg-white px-3 py-2 text-sm"
           >
             <option value="">All shipping</option>
@@ -178,13 +189,21 @@ export default function RMAs() {
           <select
             id="rma-resolution-filter"
             value={resolutionFilter}
-            onChange={(event) => setResolutionFilter(event.target.value)}
+            onChange={(event) => updateFilter("resolution", event.target.value)}
             className="w-full border bg-white px-3 py-2 text-sm"
           >
             <option value="">All resolutions</option>
             {resolutionStatuses.map((status) => <option key={status}>{status}</option>)}
           </select>
         </div>
+        <button
+          type="button"
+          disabled={!hasActiveFilters}
+          onClick={() => setSearchParams({}, { replace: true })}
+          className="border bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Clear filters
+        </button>
       </div>
 
       <p className="mb-2 text-xs text-gray-500" aria-live="polite">
