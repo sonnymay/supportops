@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- `POST /ai/suggest` now escapes `ticket_id` before interpolating it into PostgREST filters in `ai.py`'s ticket and note lookups, closing the same filter-injection gap already fixed elsewhere in the API.
 - `db_patch`, `db_delete`, and the `{id}`-based ticket routes (`GET /tickets/{id}`, `GET /tickets/{id}/notes`, `GET /tickets/{id}/history`, and the status lookup in `PUT /tickets/{id}`) now escape the `id` path parameter before interpolating it into PostgREST filters, so a crafted id can no longer append extra conditions or query parameters.
 - `GET /tickets/search` and `GET /tickets/filter` no longer interpolate raw user input into PostgREST filter strings. Reserved logical-filter values are now quoted with embedded backslashes and quotes escaped, and all values are percent-encoded, so a crafted `q`, `status`, `priority`, or `assigned_user_id` can no longer break out of the intended filter or inject extra query parameters.
 
