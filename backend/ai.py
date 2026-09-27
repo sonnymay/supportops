@@ -8,7 +8,7 @@ from typing import Any
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from database import db_get
+from database import db_get, escape_filter_value
 
 load_dotenv()
 
@@ -28,14 +28,16 @@ def _get_client() -> Anthropic:
 
 
 def _fetch_ticket(ticket_id: str) -> dict[str, Any]:
-    result = db_get("tickets", f"id=eq.{ticket_id}")
+    result = db_get("tickets", f"id=eq.{escape_filter_value(ticket_id)}")
     if not isinstance(result, list) or not result:
         raise ValueError(f"Ticket {ticket_id} not found")
     return result[0]
 
 
 def _fetch_notes(ticket_id: str) -> list[dict[str, Any]]:
-    notes = db_get("ticket_notes", f"ticket_id=eq.{ticket_id}&order=created_at.asc")
+    notes = db_get(
+        "ticket_notes", f"ticket_id=eq.{escape_filter_value(ticket_id)}&order=created_at.asc"
+    )
     return notes if isinstance(notes, list) else []
 
 
