@@ -144,3 +144,28 @@ def test_id_helpers_escape_injected_query_params(monkeypatch, helper):
     assert url.count("&") == 0, url
     assert "status=eq.Closed" not in url
     assert url.endswith("/rest/v1/tickets?id=eq." + database.escape_filter_value(malicious_id))
+
+
+def test_ai_fetchers_escape_ticket_id(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    # test_main.py stubs sys.modules["ai"]; load the real module from its file.
+    spec = importlib.util.spec_from_file_location("real_ai", Path(__file__).with_name("ai.py"))
+    real_ai = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(real_ai)
+
+    calls = []
+
+    def fake_get(table, params=""):
+        calls.append(params)
+        return [{"id": "t1"}]
+
+    monkeypatch.setattr(real_ai, "db_get", fake_get)
+    payload = "t1&status=eq.Closed"
+
+    real_ai._fetch_ticket(payload)
+    real_ai._fetch_notes(payload)
+
+    assert all("&status=eq.Closed" not in params for params in calls)
+    assert calls[0] == "id=eq.t1%26status%3Deq.Closed"
