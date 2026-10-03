@@ -2,18 +2,8 @@
 since test_main.py stubs ``sys.modules["ai"]``."""
 
 import importlib.util
-import sys
-import types
 from pathlib import Path
 from unittest.mock import patch
-
-if "anthropic" not in sys.modules:
-    try:
-        import anthropic  # noqa: F401
-    except ImportError:
-        stub = types.ModuleType("anthropic")
-        stub.Anthropic = object
-        sys.modules["anthropic"] = stub
 
 _spec = importlib.util.spec_from_file_location("ai_real", Path(__file__).with_name("ai.py"))
 ai_real = importlib.util.module_from_spec(_spec)
