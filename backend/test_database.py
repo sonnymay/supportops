@@ -8,6 +8,7 @@ import database
 
 
 def test_get_headers_uses_supabase_key(monkeypatch):
+    monkeypatch.setattr(database, "SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setattr(database, "SUPABASE_KEY", "secret")
 
     headers = database.get_headers()
