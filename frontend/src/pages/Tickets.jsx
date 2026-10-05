@@ -193,7 +193,7 @@ export default function Tickets() {
           </div>
         ))}
         <div className="mt-4 flex gap-2">
-          <input disabled={noteSaving} className="min-w-0 flex-1 border rounded px-3 py-2 text-sm disabled:bg-gray-100" placeholder="Add a note..."
+          <input aria-label="Add a note" disabled={noteSaving} className="min-w-0 flex-1 border rounded px-3 py-2 text-sm disabled:bg-gray-100" placeholder="Add a note..."
             value={newNote} onChange={e => setNewNote(e.target.value)} />
           <button disabled={noteSaving || !newNote.trim()} onClick={handleAddNote} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm disabled:cursor-not-allowed disabled:opacity-50">
             {noteSaving ? "Adding…" : "Add"}
@@ -233,40 +233,40 @@ export default function Tickets() {
           <h3 className="font-semibold mb-4">{editing ? "Edit Ticket" : "New Ticket"}</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="text-sm text-gray-600">Title *</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.title}
+              <label htmlFor="ticket-form-title" className="text-sm text-gray-600">Title *</label>
+              <input id="ticket-form-title" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })} />
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm text-gray-600">Description</label>
-              <textarea className="w-full border rounded px-3 py-2 mt-1 text-sm" rows={3} value={form.description}
+              <label htmlFor="ticket-form-description" className="text-sm text-gray-600">Description</label>
+              <textarea id="ticket-form-description" className="w-full border rounded px-3 py-2 mt-1 text-sm" rows={3} value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Status</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.status}
+              <label htmlFor="ticket-form-status" className="text-sm text-gray-600">Status</label>
+              <select id="ticket-form-status" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.status}
                 onChange={e => setForm({ ...form, status: e.target.value })}>
                 {STATUSES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600">Priority</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.priority}
+              <label htmlFor="ticket-form-priority" className="text-sm text-gray-600">Priority</label>
+              <select id="ticket-form-priority" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.priority}
                 onChange={e => setForm({ ...form, priority: e.target.value })}>
                 {PRIORITIES.map(p => <option key={p}>{p}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600">Customer</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.customer_id}
+              <label htmlFor="ticket-form-customer-id" className="text-sm text-gray-600">Customer</label>
+              <select id="ticket-form-customer-id" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.customer_id}
                 onChange={e => setForm({ ...form, customer_id: e.target.value })}>
                 <option value="">— None —</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600">Device</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.device_id}
+              <label htmlFor="ticket-form-device-id" className="text-sm text-gray-600">Device</label>
+              <select id="ticket-form-device-id" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.device_id}
                 onChange={e => setForm({ ...form, device_id: e.target.value })}>
                 <option value="">— None —</option>
                 {devices.map(d => <option key={d.id} value={d.id}>{d.serial_number} — {d.model}</option>)}

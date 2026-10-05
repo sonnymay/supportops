@@ -111,33 +111,33 @@ export default function RMAs() {
           <h3 className="font-semibold mb-4">{editing ? "Edit RMA" : "New RMA"}</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm text-gray-600">Ticket *</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.ticket_id}
+              <label htmlFor="rma-form-ticket-id" className="text-sm text-gray-600">Ticket *</label>
+              <select id="rma-form-ticket-id" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.ticket_id}
                 onChange={e => setForm({ ...form, ticket_id: e.target.value })}>
                 <option value="">— Select Ticket —</option>
                 {tickets.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600">RMA Number *</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.rma_number}
+              <label htmlFor="rma-form-rma-number" className="text-sm text-gray-600">RMA Number *</label>
+              <input id="rma-form-rma-number" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.rma_number}
                 onChange={e => setForm({ ...form, rma_number: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Serial Number</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
+              <label htmlFor="rma-form-serial-number" className="text-sm text-gray-600">Serial Number</label>
+              <input id="rma-form-serial-number" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
                 onChange={e => setForm({ ...form, serial_number: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Shipping Status</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.shipping_status}
+              <label htmlFor="rma-form-shipping-status" className="text-sm text-gray-600">Shipping Status</label>
+              <select id="rma-form-shipping-status" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.shipping_status}
                 onChange={e => setForm({ ...form, shipping_status: e.target.value })}>
                 {shippingStatuses.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-sm text-gray-600">Resolution Status</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.resolution_status}
+              <label htmlFor="rma-form-resolution-status" className="text-sm text-gray-600">Resolution Status</label>
+              <select id="rma-form-resolution-status" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.resolution_status}
                 onChange={e => setForm({ ...form, resolution_status: e.target.value })}>
                 {resolutionStatuses.map(s => <option key={s}>{s}</option>)}
               </select>
