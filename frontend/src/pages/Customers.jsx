@@ -110,8 +110,8 @@ export default function Customers() {
               { label: "Company", key: "company" },
             ].map(({ label, key }) => (
               <div key={key}>
-                <label className="text-sm text-gray-600">{label}</label>
-                <input
+                <label htmlFor={`customer-form-${key}`} className="text-sm text-gray-600">{label}</label>
+                <input id={`customer-form-${key}`}
                   className="w-full border rounded px-3 py-2 mt-1 text-sm"
                   value={form[key]}
                   onChange={e => setForm({ ...form, [key]: e.target.value })}

@@ -100,23 +100,23 @@ export default function Devices() {
           <h3 className="font-semibold mb-4">{editing ? "Edit Device" : "New Device"}</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm text-gray-600">Serial Number *</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
+              <label htmlFor="device-form-serial-number" className="text-sm text-gray-600">Serial Number *</label>
+              <input id="device-form-serial-number" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.serial_number}
                 onChange={e => setForm({ ...form, serial_number: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Model</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.model}
+              <label htmlFor="device-form-model" className="text-sm text-gray-600">Model</label>
+              <input id="device-form-model" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.model}
                 onChange={e => setForm({ ...form, model: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Product Type</label>
-              <input className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.product_type}
+              <label htmlFor="device-form-product-type" className="text-sm text-gray-600">Product Type</label>
+              <input id="device-form-product-type" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.product_type}
                 onChange={e => setForm({ ...form, product_type: e.target.value })} />
             </div>
             <div>
-              <label className="text-sm text-gray-600">Customer</label>
-              <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.customer_id}
+              <label htmlFor="device-form-customer-id" className="text-sm text-gray-600">Customer</label>
+              <select id="device-form-customer-id" className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.customer_id}
                 onChange={e => setForm({ ...form, customer_id: e.target.value })}>
                 <option value="">— None —</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
