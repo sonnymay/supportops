@@ -559,3 +559,15 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_update_ticket_returns_404_for_unknown_id(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [])
+    monkeypatch.setattr(
+        main, "db_patch", lambda *a, **k: pytest.fail("must not patch a missing ticket")
+    )
+
+    res = test_client.put("/tickets/missing", json={"title": "Printer", "status": "Open"})
+
+    assert res.status_code == 404
