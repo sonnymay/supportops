@@ -235,8 +235,10 @@ def create_ticket(t: Ticket):
 def update_ticket(id: str, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
     old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
+    if not old:
+        raise HTTPException(status_code=404, detail="Ticket not found")
     result = db_patch("tickets", id, data)
-    if old and old[0]["status"] != data["status"]:
+    if old[0]["status"] != data["status"]:
         db_post(
             "ticket_history",
             {
