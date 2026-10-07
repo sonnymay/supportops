@@ -559,3 +559,21 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    "method,path,body,patched",
+    [
+        ("put", "/customers/missing", {"name": "A"}, "db_patch"),
+        ("delete", "/customers/missing", None, "db_delete"),
+        ("put", "/devices/missing", {"serial_number": "S1"}, "db_patch"),
+        ("put", "/rmas/missing", {"ticket_id": "t1", "rma_number": "R1"}, "db_patch"),
+    ],
+)
+def test_mutating_unknown_id_returns_404(client, monkeypatch, method, path, body, patched):
+    test_client, main = client
+    monkeypatch.setattr(main, patched, lambda *args, **kwargs: [])
+
+    res = test_client.request(method, path, json=body)
+
+    assert res.status_code == 404
