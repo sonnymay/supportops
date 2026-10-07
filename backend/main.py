@@ -91,6 +91,13 @@ def clean_empty_strings(data: dict, *keys: str) -> dict:
     return data
 
 
+def require_row(result, name: str):
+    """PostgREST PATCH/DELETE match zero rows for an unknown id and return []; surface that as 404."""
+    if isinstance(result, list) and not result:
+        raise HTTPException(status_code=404, detail=f"{name} not found")
+    return result
+
+
 def model_data(model: BaseModel) -> dict:
     return model.model_dump()
 
@@ -142,12 +149,12 @@ def create_customer(c: Customer):
 
 @app.put("/customers/{id}")
 def update_customer(id: str, c: Customer):
-    return db_patch("customers", id, model_data(c))
+    return require_row(db_patch("customers", id, model_data(c)), "Customer")
 
 
 @app.delete("/customers/{id}")
 def delete_customer(id: str):
-    return db_delete("customers", id)
+    return require_row(db_delete("customers", id), "Customer")
 
 
 # --- Devices ---
@@ -163,7 +170,9 @@ def create_device(d: Device):
 
 @app.put("/devices/{id}")
 def update_device(id: str, d: Device):
-    return db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id"))
+    return require_row(
+        db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id")), "Device"
+    )
 
 
 # --- Tickets ---
@@ -279,7 +288,7 @@ def create_rma(r: RMA):
 
 @app.put("/rmas/{id}")
 def update_rma(id: str, r: RMA):
-    return db_patch("rmas", id, model_data(r))
+    return require_row(db_patch("rmas", id, model_data(r)), "RMA")
 
 
 # --- Dashboard ---
