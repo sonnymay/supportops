@@ -559,3 +559,12 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_create_ticket_rejects_invalid_status_and_priority(client, monkeypatch):
+    c, main = client
+    post = MagicMock()
+    monkeypatch.setattr(main, "db_post", post)
+    assert c.post("/tickets", json={"title": "x", "status": "Bogus"}).status_code == 422
+    assert c.post("/tickets", json={"title": "x", "priority": "Urgent"}).status_code == 422
+    post.assert_not_called()
