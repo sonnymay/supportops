@@ -190,7 +190,10 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
 
 @app.get("/tickets/filter")
 def filter_tickets(
-    status: str | None = Query(None, description="Filter by status: Open, In Progress, Closed"),
+    status: str | None = Query(
+        None,
+        description=("Filter by status: Open, In Progress, Waiting on Customer, Resolved, Closed"),
+    ),
     priority: str | None = Query(
         None, description="Filter by priority: Low, Medium, High, Critical"
     ),
