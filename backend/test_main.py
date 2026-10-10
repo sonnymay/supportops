@@ -67,6 +67,15 @@ def test_search_tickets_returns_empty_list_when_no_matches(client, monkeypatch):
     assert res.json() == []
 
 
+def test_search_tickets_rejects_blank_query(client, monkeypatch):
+    test_client, main = client
+    monkeypatch.setattr(main, "db_get", lambda *a, **k: pytest.fail("db must not be queried"))
+
+    res = test_client.get("/tickets/search?q=%20%20")
+
+    assert res.status_code == 422
+
+
 def test_filter_tickets_by_status(client, monkeypatch):
     test_client, main = client
     rows = [{"id": "t2", "status": "Open", "priority": "High", "assigned_user_id": None}]
