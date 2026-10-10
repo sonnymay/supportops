@@ -180,7 +180,11 @@ def search_tickets(q: str = Query(..., min_length=1, description="Search term"))
     Returns tickets where the term appears in title OR description, sorted by
     most recently created first.
     """
-    term = escape_filter_value(q.strip(), wildcard=True)
+    q = q.strip()
+    if not q:
+        # A whitespace-only term would become the pattern "**" and match every ticket.
+        raise HTTPException(status_code=422, detail="Search term must not be blank")
+    term = escape_filter_value(q, wildcard=True)
     results = db_get(
         "tickets",
         f"or=(title.ilike.{term},description.ilike.{term})&order=created_at.desc",
