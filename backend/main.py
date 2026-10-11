@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 import ai
 import database
@@ -74,6 +74,13 @@ class TicketNote(BaseModel):
     ticket_id: str
     note_text: str
     created_by: str | None = "Agent"
+
+    @field_validator("note_text")
+    @classmethod
+    def note_text_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("note_text must not be blank")
+        return value
 
 
 class RMA(BaseModel):
