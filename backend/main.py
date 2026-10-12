@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -14,6 +16,8 @@ from database import (
     db_post,
     escape_filter_value,
 )
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="SupportOps API")
 
@@ -314,7 +318,9 @@ def ai_suggest(req: AISuggestRequest):
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI suggestion failed: {e}") from e
+        # Log the cause server-side; don't echo internal exception text to clients.
+        logger.exception("AI suggestion failed for ticket %s", req.ticket_id)
+        raise HTTPException(status_code=500, detail="AI suggestion failed") from e
 
 
 # --- Root ---

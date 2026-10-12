@@ -559,3 +559,13 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_ai_suggest_500_does_not_leak_exception_text(client):
+    test_client, main = client
+    main.ai.suggest_for_ticket.side_effect = Exception("secret-internal-detail")
+
+    res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
+
+    assert res.status_code == 500
+    assert res.json() == {"detail": "AI suggestion failed"}
