@@ -559,3 +559,17 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_constraint_violation_returns_409_not_503(client, monkeypatch):
+    client, main = client
+
+    def conflict(*_args, **_kwargs):
+        raise main.DatabaseConflictError("conflict")
+
+    monkeypatch.setattr(main, "db_post", conflict)
+
+    res = client.post("/rmas", json={"ticket_id": "t1", "rma_number": "RMA-1"})
+
+    assert res.status_code == 409
+    assert "Retry-After" not in res.headers

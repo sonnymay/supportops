@@ -7,6 +7,7 @@ import ai
 import database
 from database import (
     DatabaseConfigError,
+    DatabaseConflictError,
     DatabaseRequestError,
     db_delete,
     db_get,
@@ -34,6 +35,11 @@ app.add_middleware(
 @app.exception_handler(DatabaseConfigError)
 def database_config_error(_request: Request, exc: DatabaseConfigError):
     return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(DatabaseConflictError)
+def database_conflict_error(_request: Request, exc: DatabaseConflictError):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
 
 
 @app.exception_handler(DatabaseRequestError)
