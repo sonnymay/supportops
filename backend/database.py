@@ -40,6 +40,10 @@ class DatabaseRequestError(RuntimeError):
     """Raised when Supabase rejects or cannot complete a request."""
 
 
+class DatabaseConflictError(RuntimeError):
+    """Raised when a write violates a unique or foreign-key constraint (HTTP 409)."""
+
+
 def is_configured():
     return bool(SUPABASE_URL and SUPABASE_KEY)
 
@@ -59,7 +63,18 @@ def get_headers():
     }
 
 
+CONFLICT_DETAIL = (
+    "That value conflicts with an existing record "
+    "(duplicate serial/RMA number or a reference to a record that does not exist)."
+)
+
+
 def handle_response(response):
+    # A constraint violation is a client error; retrying will not help, so don't
+    # report it as the service being unavailable.
+    if response.status_code == 409:
+        raise DatabaseConflictError(CONFLICT_DETAIL)
+
     try:
         response.raise_for_status()
     except requests.RequestException as error:

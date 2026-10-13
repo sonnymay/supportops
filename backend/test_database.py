@@ -144,3 +144,13 @@ def test_id_helpers_escape_injected_query_params(monkeypatch, helper):
     assert url.count("&") == 0, url
     assert "status=eq.Closed" not in url
     assert url.endswith("/rest/v1/tickets?id=eq." + database.escape_filter_value(malicious_id))
+
+
+def test_supabase_conflict_raises_conflict_error(monkeypatch):
+    monkeypatch.setattr(database, "SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setattr(database, "SUPABASE_KEY", "secret")
+    fake_response = MagicMock(status_code=409)
+    monkeypatch.setattr(database.requests, "request", MagicMock(return_value=fake_response))
+
+    with pytest.raises(database.DatabaseConflictError, match="conflicts"):
+        database.db_post("rmas", {"rma_number": "RMA-1"})
