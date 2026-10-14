@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 import ai
 import database
@@ -45,6 +45,12 @@ def database_request_error(_request: Request, exc: DatabaseRequestError):
     )
 
 
+def _require_text(value: str, field: str) -> str:
+    if not value.strip():
+        raise ValueError(f"{field} must not be blank")
+    return value
+
+
 # --- Models ---
 class Customer(BaseModel):
     name: str
@@ -52,12 +58,22 @@ class Customer(BaseModel):
     phone: str | None = None
     company: str | None = None
 
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str) -> str:
+        return _require_text(value, "name")
+
 
 class Device(BaseModel):
     serial_number: str
     model: str | None = None
     product_type: str | None = None
     customer_id: str | None = None
+
+    @field_validator("serial_number")
+    @classmethod
+    def serial_number_not_blank(cls, value: str) -> str:
+        return _require_text(value, "serial_number")
 
 
 class Ticket(BaseModel):
@@ -68,6 +84,11 @@ class Ticket(BaseModel):
     customer_id: str | None = None
     device_id: str | None = None
     assigned_user_id: str | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        return _require_text(value, "title")
 
 
 class TicketNote(BaseModel):
@@ -82,6 +103,11 @@ class RMA(BaseModel):
     serial_number: str | None = None
     shipping_status: str | None = "Pending"
     resolution_status: str | None = "Pending"
+
+    @field_validator("rma_number")
+    @classmethod
+    def rma_number_not_blank(cls, value: str) -> str:
+        return _require_text(value, "rma_number")
 
 
 def clean_empty_strings(data: dict, *keys: str) -> dict:

@@ -559,3 +559,19 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/customers", {"name": "   "}),
+        ("/devices", {"serial_number": ""}),
+        ("/tickets", {"title": "  "}),
+        ("/rmas", {"ticket_id": "t1", "rma_number": " "}),
+    ],
+)
+def test_required_text_fields_reject_blank_values(client, path, payload):
+    test_client, _main = client
+    response = test_client.post(path, json=payload)
+
+    assert response.status_code == 422
