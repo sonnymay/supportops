@@ -515,6 +515,8 @@ def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
             return [
                 {"status": "Open", "priority": "Critical"},
                 {"status": "In Progress", "priority": "Medium"},
+                {"status": "Waiting on Customer", "priority": "Low"},
+                {"status": "Resolved", "priority": "Low"},
                 {"status": "Closed", "priority": "Low"},
             ]
         return [{"resolution_status": "Pending"}, {"resolution_status": "Resolved"}]
@@ -527,6 +529,8 @@ def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
     assert res.json() == {
         "open_tickets": 1,
         "in_progress": 1,
+        "waiting_on_customer": 1,
+        "resolved_tickets": 1,
         "closed_tickets": 1,
         "critical": 1,
         "rmas_in_progress": 1,

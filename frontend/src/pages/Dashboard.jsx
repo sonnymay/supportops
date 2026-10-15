@@ -10,6 +10,8 @@ export default function Dashboard() {
   const cards = [
     { label: "Open Tickets", value: stats.open_tickets, color: "bg-blue-500" },
     { label: "In Progress", value: stats.in_progress, color: "bg-yellow-500" },
+    { label: "Waiting on Customer", value: stats.waiting_on_customer, color: "bg-orange-500" },
+    { label: "Resolved Tickets", value: stats.resolved_tickets, color: "bg-teal-500" },
     { label: "Closed Tickets", value: stats.closed_tickets, color: "bg-green-500" },
     { label: "Critical", value: stats.critical, color: "bg-red-500" },
     { label: "RMAs Pending", value: stats.rmas_in_progress, color: "bg-purple-500" },
@@ -18,7 +20,7 @@ export default function Dashboard() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-6">Dashboard</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map(({ label, value, color }) => (
           <div key={label} className={`${color} text-white rounded-lg p-6`}>
             <p className="text-sm opacity-80">{label}</p>
