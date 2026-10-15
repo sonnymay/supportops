@@ -294,6 +294,10 @@ def dashboard():
     return {
         "open_tickets": sum(1 for t in tickets if t.get("status") == "Open"),
         "in_progress": sum(1 for t in tickets if t.get("status") == "In Progress"),
+        "waiting_on_customer": sum(
+            1 for t in tickets if t.get("status") == "Waiting on Customer"
+        ),
+        "resolved_tickets": sum(1 for t in tickets if t.get("status") == "Resolved"),
         "closed_tickets": sum(1 for t in tickets if t.get("status") == "Closed"),
         "critical": sum(1 for t in tickets if t.get("priority") == "Critical"),
         "rmas_in_progress": sum(1 for r in rmas if r.get("resolution_status") == "Pending"),
