@@ -179,7 +179,7 @@ Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend
 | Devices         | `GET/POST/PUT /devices`                                             |
 | Tickets         | `GET/POST/PUT /tickets`, `GET /tickets/{id}`                       |
 | Ticket Search   | `GET /tickets/search?q={term}`                                      |
-| Ticket Filter   | `GET /tickets/filter?status=&priority=&assignee=`                   |
+| Ticket Filter   | `GET /tickets/filter?status=&priority=&assigned_user_id=`                |
 | Ticket Notes    | `GET /tickets/{id}/notes`, `POST /notes`                           |
 | Ticket Hist.    | `GET /tickets/{id}/history` (auto-appended on status change)        |
 | RMAs            | `GET/POST/PUT /rmas`                                                |
