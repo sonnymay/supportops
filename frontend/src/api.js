@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const BASE = import.meta.env.VITE_API_BASE_URL;
 
@@ -96,19 +96,25 @@ export function useApiResource(path) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Only the latest request may update state, so a slow response for an old
+  // path (or an earlier retry) cannot overwrite newer data.
+  const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
 
     try {
       const result = await api.get(path);
+      if (requestId !== latestRequest.current) return;
       setData(result);
       setError(null);
     } catch (error) {
+      if (requestId !== latestRequest.current) return;
       setError(error.message || String(error));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, [path]);
 
