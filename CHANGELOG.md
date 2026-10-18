@@ -16,9 +16,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - SLA timers with breach alerts
 - CSV export of tickets and RMAs
 - Email intake — create tickets from inbound email via webhook
-- Full-text search across tickets and notes (`GET /tickets/search`)
+- Search across ticket notes (ticket title/description search shipped in 1.3.0)
 - Webhook notifications for ticket status changes (Slack, Discord)
-- Saved views / filter presets per agent (`GET /tickets/filter`)
+- Saved views / filter presets per agent (the `GET /tickets/filter` endpoint shipped in 1.3.0)
 
 ---
 
