@@ -23,6 +23,17 @@ async function responseDetail(response) {
   if (contentType.includes("application/json")) {
     const payload = await response.json().catch(() => null);
     if (typeof payload?.detail === "string") return payload.detail;
+    // FastAPI validation errors (422) arrive as a list of {loc, msg} objects.
+    if (Array.isArray(payload?.detail)) {
+      const messages = payload.detail
+        .map((item) => {
+          if (typeof item?.msg !== "string") return "";
+          const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : null;
+          return typeof field === "string" ? `${field}: ${item.msg}` : item.msg;
+        })
+        .filter(Boolean);
+      if (messages.length) return messages.join("; ");
+    }
   }
 
   return response.text().catch(() => "");
