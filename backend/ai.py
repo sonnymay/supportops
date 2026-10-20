@@ -4,6 +4,7 @@ import json
 import os
 import re
 from typing import Any
+from urllib.parse import quote
 
 from anthropic import Anthropic
 from dotenv import load_dotenv
@@ -44,8 +45,16 @@ def _fetch_recent_resolved(limit: int = 30) -> list[dict[str, Any]]:
     tickets = db_get("tickets", params)
     if not isinstance(tickets, list):
         return []
+    if not tickets:
+        return []
+    # One batched query instead of one request per ticket (avoids an N+1 against Supabase).
+    ids = ",".join(str(t["id"]) for t in tickets)
+    notes = db_get("ticket_notes", f"ticket_id=in.({quote(ids, safe=',')})&order=created_at.asc")
+    notes_by_ticket: dict[str, list[dict[str, Any]]] = {}
+    for n in notes if isinstance(notes, list) else []:
+        notes_by_ticket.setdefault(str(n.get("ticket_id")), []).append(n)
     for t in tickets:
-        t["_notes"] = _fetch_notes(t["id"])
+        t["_notes"] = notes_by_ticket.get(str(t["id"]), [])
     return tickets
 
 
