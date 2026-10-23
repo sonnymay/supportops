@@ -517,7 +517,11 @@ def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
                 {"status": "In Progress", "priority": "Medium"},
                 {"status": "Closed", "priority": "Low"},
             ]
-        return [{"resolution_status": "Pending"}, {"resolution_status": "Resolved"}]
+        return [
+            {"resolution_status": "Pending"},
+            {"resolution_status": "In Progress"},
+            {"resolution_status": "Completed"},
+        ]
 
     monkeypatch.setattr(main, "db_get", fake_get)
 
@@ -529,7 +533,7 @@ def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
         "in_progress": 1,
         "closed_tickets": 1,
         "critical": 1,
-        "rmas_in_progress": 1,
+        "rmas_in_progress": 2,
     }
 
 

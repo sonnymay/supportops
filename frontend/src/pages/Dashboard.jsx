@@ -12,7 +12,7 @@ export default function Dashboard() {
     { label: "In Progress", value: stats.in_progress, color: "bg-yellow-500" },
     { label: "Closed Tickets", value: stats.closed_tickets, color: "bg-green-500" },
     { label: "Critical", value: stats.critical, color: "bg-red-500" },
-    { label: "RMAs Pending", value: stats.rmas_in_progress, color: "bg-purple-500" },
+    { label: "RMAs Open", value: stats.rmas_in_progress, color: "bg-purple-500" },
   ];
 
   return (

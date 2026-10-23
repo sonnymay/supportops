@@ -296,7 +296,10 @@ def dashboard():
         "in_progress": sum(1 for t in tickets if t.get("status") == "In Progress"),
         "closed_tickets": sum(1 for t in tickets if t.get("status") == "Closed"),
         "critical": sum(1 for t in tickets if t.get("priority") == "Critical"),
-        "rmas_in_progress": sum(1 for r in rmas if r.get("resolution_status") == "Pending"),
+        # RMAs still being worked: both not-yet-started and actively in progress.
+        "rmas_in_progress": sum(
+            1 for r in rmas if r.get("resolution_status") in ("Pending", "In Progress")
+        ),
     }
 
 
