@@ -215,7 +215,7 @@ export default function RMAs() {
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.shipping_status)}`}>{r.shipping_status}</span></td>
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${statusColor(r.resolution_status)}`}>{r.resolution_status}</span></td>
                 <td className="px-4 py-3">
-                  <button disabled={saving} onClick={() => handleEdit(r)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
+                  <button aria-label={`Edit RMA ${r.rma_number}`} disabled={saving} onClick={() => handleEdit(r)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
                 </td>
               </tr>
             ))}

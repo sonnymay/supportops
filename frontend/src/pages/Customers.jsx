@@ -168,8 +168,8 @@ export default function Customers() {
                 <td className="px-4 py-3 text-gray-600">{c.phone || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{c.company || "—"}</td>
                 <td className="px-4 py-3 flex gap-2">
-                  <button disabled={saving} onClick={() => handleEdit(c)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
-                  <button disabled={saving} onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline disabled:opacity-50">Delete</button>
+                  <button aria-label={`Edit ${c.name}`} disabled={saving} onClick={() => handleEdit(c)} className="text-blue-600 hover:underline disabled:opacity-50">Edit</button>
+                  <button aria-label={`Delete ${c.name}`} disabled={saving} onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline disabled:opacity-50">Delete</button>
                 </td>
               </tr>
             ))}

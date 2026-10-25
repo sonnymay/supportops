@@ -344,7 +344,7 @@ export default function Tickets() {
                 <td className="px-4 py-3"><span className={`whitespace-nowrap text-xs px-2 py-1 rounded-full font-medium ${priorityColor(t.priority)}`}>{t.priority}</span></td>
                 <td className="px-4 py-3 text-gray-600">{getName(customers, t.customer_id)}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => loadDetail(t)} className="text-blue-600 hover:underline">View</button>
+                  <button aria-label={`View ticket ${t.title}`} onClick={() => loadDetail(t)} className="text-blue-600 hover:underline">View</button>
                 </td>
               </tr>
             ))}

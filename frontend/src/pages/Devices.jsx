@@ -169,7 +169,7 @@ export default function Devices() {
                 <td className="px-4 py-3 text-gray-600">{d.product_type || "—"}</td>
                 <td className="px-4 py-3 text-gray-600">{getCustomerName(d.customer_id)}</td>
                 <td className="px-4 py-3">
-                  <button disabled={saving} onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2 disabled:opacity-50">Edit</button>
+                  <button aria-label={`Edit device ${d.serial_number}`} disabled={saving} onClick={() => handleEdit(d)} className="text-blue-600 hover:underline mr-2 disabled:opacity-50">Edit</button>
                 </td>
               </tr>
             ))}
