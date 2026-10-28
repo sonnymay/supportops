@@ -1,16 +1,36 @@
-# React + Vite
+# SupportOps frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Tailwind CSS 4 single-page app for the SupportOps ticketing and RMA tool. It talks to the FastAPI backend in [`../backend`](../backend); see the [root README](../README.md) for the full project overview.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+cp .env.example .env   # then edit if your backend isn't on localhost:8000
+npm ci
+npm run dev            # http://localhost:5173
+```
 
-## React Compiler
+### Environment
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Variable            | Purpose                                                        |
+|---------------------|----------------------------------------------------------------|
+| `VITE_API_BASE_URL` | Base URL of the backend API, e.g. `http://localhost:8000`. Required; without it every API call fails with a configuration error. |
 
-## Expanding the ESLint configuration
+## Scripts
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Command           | What it does                         |
+|-------------------|--------------------------------------|
+| `npm run dev`     | Start the Vite dev server with HMR   |
+| `npm run build`   | Production build into `dist/`        |
+| `npm run preview` | Serve the production build locally   |
+| `npm run lint`    | Run ESLint                           |
+
+## Layout
+
+- `src/api.js` – fetch wrapper (`api.get/post/put/delete`), `ApiError`, the `useApiResource` loading/error/data hook, and `warmupBackend()`, which pings `/health` on load so a sleeping Render free-tier backend starts waking early. Requests time out after 90s to allow for cold starts.
+- `src/pages/` – one page per resource: Dashboard, Tickets, Customers, Devices, RMAs.
+- `src/components/` – shared pieces: `AsyncState` (loading/error UI) and `AISuggestions` (calls `POST /ai/suggest`).
+
+## Deployment
+
+Deployed on Vercel. `vercel.json` rewrites all paths to `index.html` so client-side routes survive a refresh. Set `VITE_API_BASE_URL` in the Vercel project settings.
