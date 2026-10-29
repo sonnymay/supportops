@@ -1,9 +1,21 @@
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, Link } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Devices from "./pages/Devices";
 import Tickets from "./pages/Tickets";
 import RMAs from "./pages/RMAs";
+
+function NotFound() {
+  return (
+    <div className="max-w-md">
+      <h2 className="text-2xl font-bold mb-2">Page not found</h2>
+      <p className="text-gray-600 mb-4">That page does not exist.</p>
+      <Link to="/" className="text-blue-700 underline">
+        Back to the dashboard
+      </Link>
+    </div>
+  );
+}
 
 export default function App() {
   const navigation = [
@@ -47,6 +59,7 @@ export default function App() {
             <Route path="/customers" element={<Customers />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/rmas" element={<RMAs />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>
