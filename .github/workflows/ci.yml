@@ -77,8 +77,15 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: "20"
-      - name: Install and build
+      - name: Install dependencies
         run: |
           cd frontend
-          npm install
+          npm ci
+      - name: Lint
+        run: |
+          cd frontend
+          npm run lint
+      - name: Build
+        run: |
+          cd frontend
           npm run build
