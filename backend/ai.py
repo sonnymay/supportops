@@ -125,7 +125,8 @@ def _extract_json(text: str) -> dict[str, Any]:
 def suggest_for_ticket(ticket_id: str) -> dict[str, Any]:
     ticket = _fetch_ticket(ticket_id)
     notes = _fetch_notes(ticket_id)
-    history = _fetch_recent_resolved(30)
+    # A Resolved/Closed ticket must not be offered as a "similar past ticket" to itself.
+    history = [t for t in _fetch_recent_resolved(30) if t.get("id") != ticket.get("id")]
 
     if not history:
         return {"matches": [], "note": "No resolved tickets available for comparison."}
