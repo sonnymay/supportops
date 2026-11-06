@@ -48,6 +48,7 @@ export default function AISuggestions({ ticketId }) {
         <button
           onClick={run}
           disabled={loading || !ticketId}
+          aria-busy={loading}
           className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm disabled:opacity-50"
         >
           {loading ? "Thinking…" : "Suggest Fixes"}
@@ -55,21 +56,26 @@ export default function AISuggestions({ ticketId }) {
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded px-3 py-2 mt-2">
+        <div
+          role="alert"
+          className="text-sm text-red-600 bg-red-50 border border-red-100 rounded px-3 py-2 mt-2"
+        >
           {error}
         </div>
       )}
 
       {note && !error && (
-        <p className="text-sm text-gray-500 mt-2">{note}</p>
+        <p role="status" className="text-sm text-gray-500 mt-2">{note}</p>
       )}
 
       {matches && matches.length === 0 && !note && !error && (
-        <p className="text-sm text-gray-500 mt-2">No similar resolved tickets found yet.</p>
+        <p role="status" className="text-sm text-gray-500 mt-2">
+          No similar resolved tickets found yet.
+        </p>
       )}
 
       {matches && matches.length > 0 && (
-        <div className="mt-4 space-y-3">
+        <div role="status" aria-label="Suggested similar tickets" className="mt-4 space-y-3">
           {matches.map((m, i) => (
             <div
               key={m.ticket_id || i}
