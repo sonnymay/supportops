@@ -150,5 +150,10 @@ def suggest_for_ticket(ticket_id: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {"matches": [], "raw": raw, "error": "Model returned non-JSON output"}
 
-    matches = parsed.get("matches", [])[:3]
-    return {"matches": matches}
+    # The model may return valid JSON that doesn't follow the schema (a list, or
+    # "matches": null). Treat that like non-JSON output instead of crashing with a 500.
+    matches = parsed.get("matches") if isinstance(parsed, dict) else None
+    if not isinstance(matches, list):
+        return {"matches": [], "raw": raw, "error": "Model returned an unexpected response shape"}
+
+    return {"matches": matches[:3]}
