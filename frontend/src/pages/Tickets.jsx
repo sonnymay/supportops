@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import AISuggestions from "../components/AISuggestions";
 import { LoadingState, ErrorState, InlineError } from "../components/AsyncState";
@@ -42,6 +42,9 @@ export default function Tickets() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
+  // Identifies the most recent detail request so a slow response for a
+  // previously clicked ticket can't overwrite the currently selected one.
+  const detailRequestRef = useRef(0);
 
   const load = async () => {
     setLoading(true);
@@ -63,6 +66,7 @@ export default function Tickets() {
   };
 
   const loadDetail = async (t) => {
+    const requestId = ++detailRequestRef.current;
     setSelected(t);
     setDetailError(null);
     setDetailLoading(true);
@@ -73,12 +77,14 @@ export default function Tickets() {
         api.get(`/tickets/${t.id}/notes`),
         api.get(`/tickets/${t.id}/history`),
       ]);
+      if (requestId !== detailRequestRef.current) return;
       setNotes(ticketNotes);
       setHistory(ticketHistory);
     } catch (e) {
+      if (requestId !== detailRequestRef.current) return;
       setDetailError(e.message || String(e));
     } finally {
-      setDetailLoading(false);
+      if (requestId === detailRequestRef.current) setDetailLoading(false);
     }
   };
 
