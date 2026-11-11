@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -234,6 +236,9 @@ def create_ticket(t: Ticket):
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
+    # schema.sql has no trigger for tickets.updated_at, so the column only ever
+    # held the creation time. Stamp it here on every edit.
+    data["updated_at"] = datetime.now(UTC).isoformat()
     old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
     result = db_patch("tickets", id, data)
     if old and old[0]["status"] != data["status"]:
