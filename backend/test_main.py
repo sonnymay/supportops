@@ -559,3 +559,30 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_update_ticket_sets_updated_at(client, monkeypatch):
+    from datetime import datetime
+
+    test_client, main = client
+    patches = []
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [{"status": "Open"}])
+    monkeypatch.setattr(
+        main, "db_patch", lambda table, row_id, data: patches.append(data) or [data]
+    )
+
+    res = test_client.put("/tickets/t1", json={"title": "Printer down", "status": "Open"})
+
+    assert res.status_code == 200
+    stamp = datetime.fromisoformat(patches[0]["updated_at"])
+    assert stamp.tzinfo is not None
+
+
+def test_create_ticket_does_not_send_updated_at(client, monkeypatch):
+    test_client, main = client
+    calls = []
+    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append(data) or data)
+
+    test_client.post("/tickets", json={"title": "Printer down"})
+
+    assert "updated_at" not in calls[0]
