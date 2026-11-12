@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -272,14 +274,33 @@ def get_rmas():
     return db_get("rmas", "order=created_at.desc")
 
 
+# Resolution statuses that end an RMA's lifecycle. Moving into one of these
+# stamps rmas.closed_at; moving back out (reopening) clears it.
+RMA_CLOSED_STATUSES = {"Completed", "Cancelled"}
+
+
+def utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat()
+
+
 @app.post("/rmas")
 def create_rma(r: RMA):
-    return db_post("rmas", model_data(r))
+    data = model_data(r)
+    data["closed_at"] = utc_now_iso() if data["resolution_status"] in RMA_CLOSED_STATUSES else None
+    return db_post("rmas", data)
 
 
 @app.put("/rmas/{id}")
 def update_rma(id: str, r: RMA):
-    return db_patch("rmas", id, model_data(r))
+    data = model_data(r)
+    if data["resolution_status"] in RMA_CLOSED_STATUSES:
+        # Keep the original close time when an already-closed RMA is edited again.
+        old = db_get("rmas", f"id=eq.{escape_filter_value(id)}&select=closed_at")
+        if not (old and old[0].get("closed_at")):
+            data["closed_at"] = utc_now_iso()
+    else:
+        data["closed_at"] = None
+    return db_patch("rmas", id, data)
 
 
 # --- Dashboard ---
