@@ -5,6 +5,7 @@ with no Supabase connection or API keys required.
 
 import sys
 import types
+from datetime import datetime
 from unittest.mock import MagicMock
 from urllib.parse import quote, unquote
 
@@ -505,6 +506,66 @@ def test_rma_routes_delegate_to_database(client, monkeypatch):
     assert update_res.status_code == 200
     assert calls[0][0:2] == ("post", "rmas")
     assert calls[1][0:3] == ("patch", "rmas", "r1")
+
+
+def _capture_rma_writes(main, monkeypatch, existing_closed_at=None):
+    calls = []
+    monkeypatch.setattr(
+        main, "db_get", lambda table, params="": [{"closed_at": existing_closed_at}]
+    )
+    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append(data) or data)
+    monkeypatch.setattr(main, "db_patch", lambda table, row_id, data: calls.append(data) or data)
+    return calls
+
+
+def test_create_rma_sets_closed_at_only_for_closed_status(client, monkeypatch):
+    test_client, main = client
+    calls = _capture_rma_writes(main, monkeypatch)
+
+    test_client.post("/rmas", json={"ticket_id": "t1", "rma_number": "RMA-1"})
+    test_client.post(
+        "/rmas",
+        json={"ticket_id": "t1", "rma_number": "RMA-2", "resolution_status": "Completed"},
+    )
+
+    assert calls[0]["closed_at"] is None
+    assert datetime.fromisoformat(calls[1]["closed_at"]).tzinfo is not None
+
+
+def test_update_rma_stamps_closed_at_when_closing(client, monkeypatch):
+    test_client, main = client
+    calls = _capture_rma_writes(main, monkeypatch, existing_closed_at=None)
+
+    test_client.put(
+        "/rmas/r1",
+        json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Cancelled"},
+    )
+
+    assert datetime.fromisoformat(calls[0]["closed_at"]).tzinfo is not None
+
+
+def test_update_rma_keeps_existing_closed_at(client, monkeypatch):
+    test_client, main = client
+    calls = _capture_rma_writes(main, monkeypatch, existing_closed_at="2026-01-01T00:00:00+00:00")
+
+    test_client.put(
+        "/rmas/r1",
+        json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Completed"},
+    )
+
+    assert "closed_at" not in calls[0]
+
+
+def test_update_rma_clears_closed_at_when_reopened(client, monkeypatch):
+    test_client, main = client
+    calls = _capture_rma_writes(main, monkeypatch, existing_closed_at="2026-01-01T00:00:00+00:00")
+
+    test_client.put(
+        "/rmas/r1",
+        json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "In Progress"},
+    )
+
+    assert calls[0]["closed_at"] is None
 
 
 def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
