@@ -185,7 +185,7 @@ Free-tier dynos sleep after 15 min of inactivity. The frontend warms the backend
 | RMAs            | `GET/POST/PUT /rmas`                                                |
 | AI              | `POST /ai/suggest`                                                  |
 
-Status changes on tickets automatically append a row to `ticket_history`.
+Ticket creation and every status change automatically append a row to `ticket_history` (creation is logged with `old_status = null`).
 
 Full OpenAPI spec available at `http://localhost:8000/docs` when the backend is running.
 

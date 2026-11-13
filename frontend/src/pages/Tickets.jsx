@@ -206,7 +206,7 @@ export default function Tickets() {
         <h3 className="font-semibold mb-3">Status History</h3>
         {detailLoading ? <p className="text-gray-400 text-sm">Loading history…</p> : history.length === 0 ? <p className="text-gray-400 text-sm">No history yet</p> : history.map(h => (
           <div key={h.id} className="border-b py-2 text-sm flex gap-2 items-center">
-            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${statusColor(h.old_status)}`}>{h.old_status}</span>
+            <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${h.old_status ? statusColor(h.old_status) : "bg-gray-50 text-gray-500"}`}>{h.old_status ?? "Created"}</span>
             <span className="text-gray-400">→</span>
             <span className={`whitespace-nowrap px-2 py-0.5 rounded-full text-xs ${statusColor(h.new_status)}`}>{h.new_status}</span>
             <span className="text-gray-400 text-xs ml-auto">{new Date(h.changed_at).toLocaleString()}</span>

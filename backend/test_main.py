@@ -438,6 +438,42 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     ) in posts
 
 
+def test_create_ticket_records_initial_status_history(client, monkeypatch):
+    test_client, main = client
+    posts = []
+
+    def fake_post(table, data):
+        posts.append((table, data))
+        if table == "tickets":
+            return [{"id": "t9", **data, "status": "In Progress"}]
+        return [data]
+
+    monkeypatch.setattr(main, "db_post", fake_post)
+
+    res = test_client.post("/tickets", json={"title": "VPN down", "status": "In Progress"})
+
+    assert res.status_code == 200
+    assert res.json()[0]["id"] == "t9"
+    assert [table for table, _ in posts] == ["tickets", "ticket_history"]
+    assert posts[1][1] == {
+        "ticket_id": "t9",
+        "old_status": None,
+        "new_status": "In Progress",
+        "changed_by": "Agent",
+    }
+
+
+def test_create_ticket_skips_history_when_insert_returns_no_row(client, monkeypatch):
+    test_client, main = client
+    posts = []
+    monkeypatch.setattr(main, "db_post", lambda table, data: posts.append(table) or [])
+
+    res = test_client.post("/tickets", json={"title": "VPN down"})
+
+    assert res.status_code == 200
+    assert posts == ["tickets"]
+
+
 def test_ticket_routes_convert_blank_relationship_ids_to_null(client, monkeypatch):
     test_client, main = client
     calls = []
