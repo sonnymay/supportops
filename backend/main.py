@@ -225,10 +225,23 @@ def get_ticket(id: str):
 
 @app.post("/tickets")
 def create_ticket(t: Ticket):
-    return db_post(
-        "tickets",
-        clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id"),
-    )
+    data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
+    result = db_post("tickets", data)
+    # Record the initial status so the audit trail starts at creation
+    # (old_status=None), matching the history rows in the seed data.
+    # Supabase returns the inserted rows because of Prefer: return=representation.
+    created = result[0] if isinstance(result, list) and result else result
+    if isinstance(created, dict) and created.get("id"):
+        db_post(
+            "ticket_history",
+            {
+                "ticket_id": created["id"],
+                "old_status": None,
+                "new_status": created.get("status", data["status"]),
+                "changed_by": "Agent",
+            },
+        )
+    return result
 
 
 @app.put("/tickets/{id}")
