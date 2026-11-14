@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -141,13 +143,13 @@ def create_customer(c: Customer):
 
 
 @app.put("/customers/{id}")
-def update_customer(id: str, c: Customer):
-    return db_patch("customers", id, model_data(c))
+def update_customer(id: UUID, c: Customer):
+    return db_patch("customers", str(id), model_data(c))
 
 
 @app.delete("/customers/{id}")
-def delete_customer(id: str):
-    return db_delete("customers", id)
+def delete_customer(id: UUID):
+    return db_delete("customers", str(id))
 
 
 # --- Devices ---
@@ -162,8 +164,8 @@ def create_device(d: Device):
 
 
 @app.put("/devices/{id}")
-def update_device(id: str, d: Device):
-    return db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id"))
+def update_device(id: UUID, d: Device):
+    return db_patch("devices", str(id), clean_empty_strings(model_data(d), "customer_id"))
 
 
 # --- Tickets ---
@@ -216,8 +218,8 @@ def filter_tickets(
 
 
 @app.get("/tickets/{id}")
-def get_ticket(id: str):
-    result = db_get("tickets", f"id=eq.{escape_filter_value(id)}")
+def get_ticket(id: UUID):
+    result = db_get("tickets", f"id=eq.{escape_filter_value(str(id))}")
     if not result:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return result[0]
@@ -232,15 +234,15 @@ def create_ticket(t: Ticket):
 
 
 @app.put("/tickets/{id}")
-def update_ticket(id: str, t: Ticket):
+def update_ticket(id: UUID, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
-    old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
-    result = db_patch("tickets", id, data)
+    old = db_get("tickets", f"id=eq.{escape_filter_value(str(id))}&select=status")
+    result = db_patch("tickets", str(id), data)
     if old and old[0]["status"] != data["status"]:
         db_post(
             "ticket_history",
             {
-                "ticket_id": id,
+                "ticket_id": str(id),
                 "old_status": old[0]["status"],
                 "new_status": data["status"],
                 "changed_by": "Agent",
@@ -251,8 +253,10 @@ def update_ticket(id: str, t: Ticket):
 
 # --- Notes ---
 @app.get("/tickets/{id}/notes")
-def get_notes(id: str):
-    return db_get("ticket_notes", f"ticket_id=eq.{escape_filter_value(id)}&order=created_at.asc")
+def get_notes(id: UUID):
+    return db_get(
+        "ticket_notes", f"ticket_id=eq.{escape_filter_value(str(id))}&order=created_at.asc"
+    )
 
 
 @app.post("/notes")
@@ -262,8 +266,10 @@ def create_note(n: TicketNote):
 
 # --- History ---
 @app.get("/tickets/{id}/history")
-def get_history(id: str):
-    return db_get("ticket_history", f"ticket_id=eq.{escape_filter_value(id)}&order=changed_at.asc")
+def get_history(id: UUID):
+    return db_get(
+        "ticket_history", f"ticket_id=eq.{escape_filter_value(str(id))}&order=changed_at.asc"
+    )
 
 
 # --- RMAs ---
@@ -278,8 +284,8 @@ def create_rma(r: RMA):
 
 
 @app.put("/rmas/{id}")
-def update_rma(id: str, r: RMA):
-    return db_patch("rmas", id, model_data(r))
+def update_rma(id: UUID, r: RMA):
+    return db_patch("rmas", str(id), model_data(r))
 
 
 # --- Dashboard ---

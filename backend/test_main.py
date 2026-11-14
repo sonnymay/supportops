@@ -11,6 +11,12 @@ from urllib.parse import quote, unquote
 import pytest
 from fastapi.testclient import TestClient
 
+CUSTOMER_ID = "00000000-0000-4000-8000-0000000000c1"
+DEVICE_ID = "00000000-0000-4000-8000-0000000000d1"
+TICKET_ID = "00000000-0000-4000-8000-0000000000a1"
+RMA_ID = "00000000-0000-4000-8000-0000000000b1"
+MISSING_ID = "00000000-0000-4000-8000-00000000ffff"
+
 
 @pytest.fixture
 def client(monkeypatch):
@@ -196,51 +202,50 @@ def test_filter_tickets_escapes_postgrest_injection(client, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "path_template",
-    ["/tickets/{id}", "/tickets/{id}/notes", "/tickets/{id}/history"],
+    ("method", "path_template"),
+    [
+        ("get", "/tickets/{id}"),
+        ("get", "/tickets/{id}/notes"),
+        ("get", "/tickets/{id}/history"),
+        ("put", "/tickets/{id}"),
+        ("put", "/customers/{id}"),
+        ("delete", "/customers/{id}"),
+        ("put", "/devices/{id}"),
+        ("put", "/rmas/{id}"),
+    ],
 )
-def test_ticket_id_routes_escape_postgrest_injection(client, monkeypatch, path_template):
+@pytest.mark.parametrize(
+    "bad_id",
+    ["missing", "t1&status=eq.Closed", "not-a-uuid"],
+)
+def test_id_routes_reject_non_uuid_ids_before_querying(
+    client, monkeypatch, method, path_template, bad_id
+):
+    """Malformed ids return 422 instead of reaching Supabase.
+
+    Postgres rejects a non-UUID value for a uuid column with a 400, which
+    handle_response would surface as a misleading, retryable 503. Rejecting it
+    at the route also means crafted ids never reach a PostgREST filter.
+    """
     test_client, main = client
-    captured = {}
 
-    def fake_get(table, params=""):
-        captured["params"] = params
-        return [{"id": "t1"}]
+    def fail(*_args, **_kwargs):
+        raise AssertionError("database should not be called for a malformed id")
 
-    monkeypatch.setattr(main, "db_get", fake_get)
+    for name in ("db_get", "db_post", "db_patch", "db_delete"):
+        monkeypatch.setattr(main, name, fail)
 
-    # A crafted id that tries to append an extra filter / parameter.
-    payload = quote("t1&status=eq.Closed", safe="")
-    res = test_client.get(path_template.format(id=payload))
+    bodies = {
+        "/tickets/{id}": {"title": "Printer", "status": "Open", "priority": "Low"},
+        "/customers/{id}": {"name": "Acme"},
+        "/devices/{id}": {"serial_number": "SN-1"},
+        "/rmas/{id}": {"ticket_id": TICKET_ID, "rma_number": "RMA-1"},
+    }
+    kwargs = {"json": bodies[path_template]} if method == "put" else {}
+    path = path_template.format(id=quote(bad_id, safe=""))
+    res = getattr(test_client, method)(path, **kwargs)
 
-    assert res.status_code == 200
-    params = captured["params"]
-    assert "&status=eq.Closed" not in params
-    # Only the template's own "&order=" (if any) may remain.
-    assert params.count("&") <= 1, params
-
-
-def test_update_ticket_escapes_id_in_status_lookup(client, monkeypatch):
-    test_client, main = client
-    captured = {}
-
-    def fake_get(table, params=""):
-        captured["get_params"] = params
-        return [{"status": "Open"}]
-
-    monkeypatch.setattr(main, "db_get", fake_get)
-    monkeypatch.setattr(main, "db_patch", lambda table, id, data: [{"id": id, **data}])
-    monkeypatch.setattr(main, "db_post", lambda table, data: [data])
-
-    payload = quote("t1&status=eq.Closed", safe="")
-    res = test_client.put(
-        f"/tickets/{payload}",
-        json={"title": "Printer", "status": "Open", "priority": "Low"},
-    )
-
-    assert res.status_code == 200
-    assert "&status=eq.Closed" not in captured["get_params"]
-    assert captured["get_params"].endswith("&select=status")
+    assert res.status_code == 422
 
 
 def test_health_returns_ok(client):
@@ -314,7 +319,7 @@ def test_data_route_returns_503_when_supabase_times_out(client, monkeypatch):
 def test_get_ticket_not_found_returns_404(client, monkeypatch):
     test_client, main = client
     monkeypatch.setattr(main, "db_get", lambda table, params="": [])
-    res = test_client.get("/tickets/missing")
+    res = test_client.get(f"/tickets/{MISSING_ID}")
     assert res.status_code == 404
     assert res.json()["detail"] == "Ticket not found"
 
@@ -346,8 +351,8 @@ def test_customer_crud_delegates_to_database(client, monkeypatch):
     )
 
     create_res = test_client.post("/customers", json={"name": "Acme", "email": "ops@example.com"})
-    update_res = test_client.put("/customers/c1", json={"name": "Acme Updated"})
-    delete_res = test_client.delete("/customers/c1")
+    update_res = test_client.put(f"/customers/{CUSTOMER_ID}", json={"name": "Acme Updated"})
+    delete_res = test_client.delete(f"/customers/{CUSTOMER_ID}")
 
     assert create_res.status_code == 200
     assert update_res.status_code == 200
@@ -357,8 +362,8 @@ def test_customer_crud_delegates_to_database(client, monkeypatch):
         "customers",
         {"name": "Acme", "email": "ops@example.com", "phone": None, "company": None},
     )
-    assert calls[1][0:3] == ("patch", "customers", "c1")
-    assert calls[2] == ("delete", "customers", "c1")
+    assert calls[1][0:3] == ("patch", "customers", CUSTOMER_ID)
+    assert calls[2] == ("delete", "customers", CUSTOMER_ID)
 
 
 def test_device_routes_delegate_to_database(client, monkeypatch):
@@ -377,14 +382,14 @@ def test_device_routes_delegate_to_database(client, monkeypatch):
 
     list_res = test_client.get("/devices")
     create_res = test_client.post("/devices", json={"serial_number": "SN-1", "model": "Router"})
-    update_res = test_client.put("/devices/d1", json={"serial_number": "SN-2"})
+    update_res = test_client.put(f"/devices/{DEVICE_ID}", json={"serial_number": "SN-2"})
 
     assert list_res.status_code == 200
     assert list_res.json() == rows
     assert create_res.status_code == 200
     assert update_res.status_code == 200
     assert calls[0][0:2] == ("post", "devices")
-    assert calls[1][0:3] == ("patch", "devices", "d1")
+    assert calls[1][0:3] == ("patch", "devices", DEVICE_ID)
 
 
 def test_device_routes_convert_blank_customer_id_to_null(client, monkeypatch):
@@ -413,9 +418,9 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     posts = []
 
     def fake_get(table, params=""):
-        if table == "tickets" and params.startswith("id=eq.t1&select=status"):
+        if table == "tickets" and params.startswith(f"id=eq.{TICKET_ID}&select=status"):
             return [{"status": "Open"}]
-        if table == "tickets" and params.startswith("id=eq.t1"):
+        if table == "tickets" and params.startswith(f"id=eq.{TICKET_ID}"):
             return [{"id": "t1", "status": "Open"}]
         return [{"id": "t1", "title": "Printer down"}]
 
@@ -424,9 +429,11 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     monkeypatch.setattr(main, "db_patch", lambda table, row_id, data: {"id": row_id, **data})
 
     list_res = test_client.get("/tickets")
-    get_res = test_client.get("/tickets/t1")
+    get_res = test_client.get(f"/tickets/{TICKET_ID}")
     create_res = test_client.post("/tickets", json={"title": "Printer down", "status": "Open"})
-    update_res = test_client.put("/tickets/t1", json={"title": "Printer fixed", "status": "Closed"})
+    update_res = test_client.put(
+        f"/tickets/{TICKET_ID}", json={"title": "Printer fixed", "status": "Closed"}
+    )
 
     assert list_res.status_code == 200
     assert get_res.status_code == 200
@@ -434,7 +441,12 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     assert update_res.status_code == 200
     assert (
         "ticket_history",
-        {"ticket_id": "t1", "old_status": "Open", "new_status": "Closed", "changed_by": "Agent"},
+        {
+            "ticket_id": TICKET_ID,
+            "old_status": "Open",
+            "new_status": "Closed",
+            "changed_by": "Agent",
+        },
     ) in posts
 
 
@@ -467,9 +479,9 @@ def test_notes_and_history_routes_delegate_to_database(client, monkeypatch):
     )
     monkeypatch.setattr(main, "db_post", lambda table, data: {"table": table, **data})
 
-    notes_res = test_client.get("/tickets/t1/notes")
+    notes_res = test_client.get(f"/tickets/{TICKET_ID}/notes")
     create_note_res = test_client.post("/notes", json={"ticket_id": "t1", "note_text": "Rebooted"})
-    history_res = test_client.get("/tickets/t1/history")
+    history_res = test_client.get(f"/tickets/{TICKET_ID}/history")
 
     assert notes_res.status_code == 200
     assert notes_res.json()[0]["table"] == "ticket_notes"
@@ -497,14 +509,15 @@ def test_rma_routes_delegate_to_database(client, monkeypatch):
     list_res = test_client.get("/rmas")
     create_res = test_client.post("/rmas", json={"ticket_id": "t1", "rma_number": "RMA-1"})
     update_res = test_client.put(
-        "/rmas/r1", json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Shipped"}
+        f"/rmas/{RMA_ID}",
+        json={"ticket_id": "t1", "rma_number": "RMA-1", "resolution_status": "Shipped"},
     )
 
     assert list_res.status_code == 200
     assert create_res.status_code == 200
     assert update_res.status_code == 200
     assert calls[0][0:2] == ("post", "rmas")
-    assert calls[1][0:3] == ("patch", "rmas", "r1")
+    assert calls[1][0:3] == ("patch", "rmas", RMA_ID)
 
 
 def test_dashboard_counts_ticket_and_rma_statuses(client, monkeypatch):
