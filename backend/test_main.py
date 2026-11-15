@@ -559,3 +559,24 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
     res = test_client.post("/ai/suggest", json={"ticket_id": "t1"})
 
     assert res.status_code == expected_status
+
+
+def test_blank_optional_fields_are_stored_as_null(client, monkeypatch):
+    test_client, main = client
+    calls = []
+    monkeypatch.setattr(main, "db_post", lambda table, data: calls.append((table, data)) or data)
+    monkeypatch.setattr(
+        main, "db_patch", lambda table, id, data: calls.append((table, data)) or data
+    )
+    monkeypatch.setattr(main, "db_get", lambda *a, **k: [])
+
+    test_client.post("/customers", json={"name": "Acme", "email": "", "phone": "", "company": ""})
+    test_client.put("/customers/c1", json={"name": "Acme", "email": "", "phone": "", "company": ""})
+    test_client.post("/devices", json={"serial_number": "S1", "model": "", "product_type": ""})
+    test_client.post("/tickets", json={"title": "T", "description": ""})
+
+    customer_post, customer_put, device, ticket = (c[1] for c in calls[:4])
+    for row in (customer_post, customer_put):
+        assert (row["email"], row["phone"], row["company"]) == (None, None, None)
+    assert device["model"] is None and device["product_type"] is None
+    assert ticket["description"] is None

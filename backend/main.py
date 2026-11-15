@@ -84,6 +84,13 @@ class RMA(BaseModel):
     resolution_status: str | None = "Pending"
 
 
+# Optional fields the UI submits as "" when left blank; stored as NULL so
+# blank values aren't persisted as empty strings.
+CUSTOMER_OPTIONAL = ("email", "phone", "company")
+DEVICE_OPTIONAL = ("model", "product_type", "customer_id")
+TICKET_OPTIONAL = ("description", "customer_id", "device_id", "assigned_user_id")
+
+
 def clean_empty_strings(data: dict, *keys: str) -> dict:
     for key in keys:
         if data.get(key) == "":
@@ -137,12 +144,12 @@ def get_customers():
 
 @app.post("/customers")
 def create_customer(c: Customer):
-    return db_post("customers", model_data(c))
+    return db_post("customers", clean_empty_strings(model_data(c), *CUSTOMER_OPTIONAL))
 
 
 @app.put("/customers/{id}")
 def update_customer(id: str, c: Customer):
-    return db_patch("customers", id, model_data(c))
+    return db_patch("customers", id, clean_empty_strings(model_data(c), *CUSTOMER_OPTIONAL))
 
 
 @app.delete("/customers/{id}")
@@ -158,12 +165,12 @@ def get_devices():
 
 @app.post("/devices")
 def create_device(d: Device):
-    return db_post("devices", clean_empty_strings(model_data(d), "customer_id"))
+    return db_post("devices", clean_empty_strings(model_data(d), *DEVICE_OPTIONAL))
 
 
 @app.put("/devices/{id}")
 def update_device(id: str, d: Device):
-    return db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id"))
+    return db_patch("devices", id, clean_empty_strings(model_data(d), *DEVICE_OPTIONAL))
 
 
 # --- Tickets ---
@@ -227,13 +234,13 @@ def get_ticket(id: str):
 def create_ticket(t: Ticket):
     return db_post(
         "tickets",
-        clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id"),
+        clean_empty_strings(model_data(t), *TICKET_OPTIONAL),
     )
 
 
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
-    data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
+    data = clean_empty_strings(model_data(t), *TICKET_OPTIONAL)
     old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
     result = db_patch("tickets", id, data)
     if old and old[0]["status"] != data["status"]:
