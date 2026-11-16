@@ -91,6 +91,13 @@ def clean_empty_strings(data: dict, *keys: str) -> dict:
     return data
 
 
+def require_row(result, label: str):
+    """Raise 404 when a PATCH/DELETE matched no row (PostgREST returns ``[]``)."""
+    if result == []:
+        raise HTTPException(status_code=404, detail=f"{label} not found")
+    return result
+
+
 def model_data(model: BaseModel) -> dict:
     return model.model_dump()
 
@@ -142,12 +149,12 @@ def create_customer(c: Customer):
 
 @app.put("/customers/{id}")
 def update_customer(id: str, c: Customer):
-    return db_patch("customers", id, model_data(c))
+    return require_row(db_patch("customers", id, model_data(c)), "Customer")
 
 
 @app.delete("/customers/{id}")
 def delete_customer(id: str):
-    return db_delete("customers", id)
+    return require_row(db_delete("customers", id), "Customer")
 
 
 # --- Devices ---
@@ -163,7 +170,9 @@ def create_device(d: Device):
 
 @app.put("/devices/{id}")
 def update_device(id: str, d: Device):
-    return db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id"))
+    return require_row(
+        db_patch("devices", id, clean_empty_strings(model_data(d), "customer_id")), "Device"
+    )
 
 
 # --- Tickets ---
@@ -235,7 +244,7 @@ def create_ticket(t: Ticket):
 def update_ticket(id: str, t: Ticket):
     data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
     old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
-    result = db_patch("tickets", id, data)
+    result = require_row(db_patch("tickets", id, data), "Ticket")
     if old and old[0]["status"] != data["status"]:
         db_post(
             "ticket_history",
@@ -279,7 +288,7 @@ def create_rma(r: RMA):
 
 @app.put("/rmas/{id}")
 def update_rma(id: str, r: RMA):
-    return db_patch("rmas", id, model_data(r))
+    return require_row(db_patch("rmas", id, model_data(r)), "RMA")
 
 
 # --- Dashboard ---
