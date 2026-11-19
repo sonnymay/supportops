@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -60,11 +62,16 @@ class Device(BaseModel):
     customer_id: str | None = None
 
 
+TicketStatus = Literal["Open", "In Progress", "Waiting on Customer", "Resolved", "Closed"]
+TicketPriority = Literal["Low", "Medium", "High", "Critical"]
+
+
 class Ticket(BaseModel):
     title: str
     description: str | None = None
-    status: str | None = "Open"
-    priority: str | None = "Medium"
+    # Must match the check constraints in supabase/schema.sql so bad values get a 422.
+    status: TicketStatus = "Open"
+    priority: TicketPriority = "Medium"
     customer_id: str | None = None
     device_id: str | None = None
     assigned_user_id: str | None = None

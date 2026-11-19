@@ -243,6 +243,30 @@ def test_update_ticket_escapes_id_in_status_lookup(client, monkeypatch):
     assert captured["get_params"].endswith("&select=status")
 
 
+@pytest.mark.parametrize(
+    "method, bad_fields",
+    [
+        ("post", {"status": "Bogus"}),
+        ("post", {"priority": "Urgent"}),
+        ("put", {"status": "Bogus"}),
+        ("put", {"priority": "Urgent"}),
+        ("put", {"status": None}),
+    ],
+)
+def test_ticket_rejects_invalid_status_or_priority(client, monkeypatch, method, bad_fields):
+    test_client, main = client
+    called = []
+    monkeypatch.setattr(main, "db_get", lambda *a, **k: called.append("get") or [])
+    monkeypatch.setattr(main, "db_patch", lambda *a, **k: called.append("patch") or [])
+    monkeypatch.setattr(main, "db_post", lambda *a, **k: called.append("post") or [])
+
+    url = "/tickets" if method == "post" else "/tickets/t1"
+    res = getattr(test_client, method)(url, json={"title": "Printer", **bad_fields})
+
+    assert res.status_code == 422
+    assert called == []
+
+
 def test_health_returns_ok(client):
     test_client, _ = client
     res = test_client.get("/health")
