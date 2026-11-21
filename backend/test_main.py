@@ -562,18 +562,58 @@ def test_ai_suggest_maps_errors_to_http_responses(client, error, expected_status
 
 
 @pytest.mark.parametrize(
-    ("method", "path", "body", "patched"),
+    ("method", "path", "body", "patched", "label"),
     [
-        ("put", "/customers/x", {"name": "A"}, "db_patch"),
-        ("delete", "/customers/x", None, "db_delete"),
-        ("put", "/devices/x", {"serial_number": "S"}, "db_patch"),
-        ("put", "/rmas/x", {"ticket_id": "t", "rma_number": "R"}, "db_patch"),
-        ("put", "/tickets/x", {"title": "T"}, "db_patch"),
+        ("put", "/customers/{id}", {"name": "A"}, "db_patch", "Customer"),
+        ("delete", "/customers/{id}", None, "db_delete", "Customer"),
+        ("put", "/devices/{id}", {"serial_number": "S"}, "db_patch", "Device"),
+        (
+            "put",
+            "/rmas/{id}",
+            {"ticket_id": "00000000-0000-4000-8000-0000000000a1", "rma_number": "R"},
+            "db_patch",
+            "RMA",
+        ),
+        ("put", "/tickets/{id}", {"title": "T"}, "db_patch", "Ticket"),
     ],
 )
-def test_update_or_delete_missing_row_returns_404(client, monkeypatch, method, path, body, patched):
+def test_update_or_delete_missing_row_returns_404(
+    client, monkeypatch, method, path, body, patched, label
+):
     test_client, main = client
+    missing_id = "00000000-0000-4000-8000-00000000ffff"
     monkeypatch.setattr(main, "db_get", lambda *a, **k: [])
-    monkeypatch.setattr(main, patched, lambda *a, **k: [])
-    response = getattr(test_client, method)(path, **({"json": body} if body else {}))
+    mutation = MagicMock(return_value=[])
+    history_write = MagicMock()
+    monkeypatch.setattr(main, patched, mutation)
+    monkeypatch.setattr(main, "db_post", history_write)
+
+    response = getattr(test_client, method)(
+        path.format(id=missing_id), **({"json": body} if body else {})
+    )
+
     assert response.status_code == 404
+    assert response.json() == {"detail": f"{label} not found"}
+    mutation.assert_called_once()
+    history_write.assert_not_called()
+
+
+def test_update_ticket_deleted_after_lookup_returns_404_without_history(client, monkeypatch):
+    test_client, main = client
+    ticket_id = "00000000-0000-4000-8000-0000000000a1"
+    lookup = MagicMock(return_value=[{"status": "Open"}])
+    mutation = MagicMock(return_value=[])
+    history_write = MagicMock()
+    monkeypatch.setattr(main, "db_get", lookup)
+    monkeypatch.setattr(main, "db_patch", mutation)
+    monkeypatch.setattr(main, "db_post", history_write)
+
+    response = test_client.put(
+        f"/tickets/{ticket_id}", json={"title": "Printer fixed", "status": "Closed"}
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Ticket not found"}
+    lookup.assert_called_once_with("tickets", f"id=eq.{ticket_id}&select=status")
+    mutation.assert_called_once()
+    history_write.assert_not_called()
