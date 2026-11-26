@@ -438,6 +438,51 @@ def test_ticket_routes_create_update_and_record_status_history(client, monkeypat
     ) in posts
 
 
+def test_update_ticket_only_patches_fields_sent_by_client(client, monkeypatch):
+    test_client, main = client
+    patches = []
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [{"status": "Open"}])
+    monkeypatch.setattr(main, "db_post", lambda table, data: data)
+    monkeypatch.setattr(
+        main, "db_patch", lambda table, row_id, data: patches.append(data) or [data]
+    )
+
+    # Mirrors the Tickets page edit form, which has no assignee field.
+    res = test_client.put(
+        "/tickets/t1",
+        json={
+            "title": "Printer down",
+            "description": "",
+            "status": "Open",
+            "priority": "High",
+            "customer_id": "",
+            "device_id": "",
+        },
+    )
+
+    assert res.status_code == 200
+    assert "assigned_user_id" not in patches[0]
+    assert patches[0]["customer_id"] is None
+    assert patches[0]["device_id"] is None
+
+
+def test_update_ticket_without_status_skips_history(client, monkeypatch):
+    test_client, main = client
+    posts = []
+    patches = []
+    monkeypatch.setattr(main, "db_get", lambda table, params="": [{"status": "Open"}])
+    monkeypatch.setattr(main, "db_post", lambda table, data: posts.append((table, data)))
+    monkeypatch.setattr(
+        main, "db_patch", lambda table, row_id, data: patches.append(data) or [data]
+    )
+
+    res = test_client.put("/tickets/t1", json={"title": "Renamed"})
+
+    assert res.status_code == 200
+    assert patches == [{"title": "Renamed"}]
+    assert posts == []
+
+
 def test_ticket_routes_convert_blank_relationship_ids_to_null(client, monkeypatch):
     test_client, main = client
     calls = []
