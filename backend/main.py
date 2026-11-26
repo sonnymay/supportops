@@ -233,10 +233,15 @@ def create_ticket(t: Ticket):
 
 @app.put("/tickets/{id}")
 def update_ticket(id: str, t: Ticket):
-    data = clean_empty_strings(model_data(t), "customer_id", "device_id", "assigned_user_id")
+    # Only PATCH the fields the client actually sent. Dumping the full model would
+    # fill omitted fields with their defaults, so an edit from a form that has no
+    # assignee input (the Tickets page) would silently clear assigned_user_id.
+    data = clean_empty_strings(
+        t.model_dump(exclude_unset=True), "customer_id", "device_id", "assigned_user_id"
+    )
     old = db_get("tickets", f"id=eq.{escape_filter_value(id)}&select=status")
     result = db_patch("tickets", id, data)
-    if old and old[0]["status"] != data["status"]:
+    if old and "status" in data and old[0]["status"] != data["status"]:
         db_post(
             "ticket_history",
             {
