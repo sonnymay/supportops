@@ -135,6 +135,12 @@ export default function Tickets() {
     }
   };
 
+  // With a customer selected, offer only that customer's devices plus
+  // unassigned ones. The current selection stays listed so editing an
+  // existing ticket never silently drops its device.
+  const deviceOptions = devices.filter(d =>
+    !form.customer_id || !d.customer_id || d.customer_id === form.customer_id || d.id === form.device_id
+  );
   const getName = (arr, id) => arr.find(x => x.id === id)?.name || "—";
   const normalizedQuery = query.trim().toLowerCase();
   const filteredTickets = tickets.filter((ticket) => {
@@ -259,7 +265,14 @@ export default function Tickets() {
             <div>
               <label className="text-sm text-gray-600">Customer</label>
               <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.customer_id}
-                onChange={e => setForm({ ...form, customer_id: e.target.value })}>
+                onChange={e => {
+                  const customerId = e.target.value;
+                  const device = devices.find(d => d.id === form.device_id);
+                  // Drop a device that belongs to a different customer so the
+                  // ticket can't link one customer's device to another.
+                  const keepDevice = !customerId || !device?.customer_id || device.customer_id === customerId;
+                  setForm({ ...form, customer_id: customerId, device_id: keepDevice ? form.device_id : "" });
+                }}>
                 <option value="">— None —</option>
                 {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -269,7 +282,7 @@ export default function Tickets() {
               <select className="w-full border rounded px-3 py-2 mt-1 text-sm" value={form.device_id}
                 onChange={e => setForm({ ...form, device_id: e.target.value })}>
                 <option value="">— None —</option>
-                {devices.map(d => <option key={d.id} value={d.id}>{d.serial_number} — {d.model}</option>)}
+                {deviceOptions.map(d => <option key={d.id} value={d.id}>{d.model ? `${d.serial_number} — ${d.model}` : d.serial_number}</option>)}
               </select>
             </div>
           </div>
