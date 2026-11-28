@@ -68,7 +68,7 @@ export default function RMAs() {
   };
 
   const handleEdit = (r) => {
-    setForm({ ticket_id: r.ticket_id, rma_number: r.rma_number, serial_number: r.serial_number || "", shipping_status: r.shipping_status, resolution_status: r.resolution_status });
+    setForm({ ticket_id: r.ticket_id, rma_number: r.rma_number, serial_number: r.serial_number || "", shipping_status: r.shipping_status || "Pending", resolution_status: r.resolution_status || "Pending" });
     setEditing(r.id);
     setActionError(null);
     setShowForm(true);
