@@ -113,7 +113,7 @@ export default function Tickets() {
   };
 
   const handleEdit = (t) => {
-    setForm({ title: t.title, description: t.description || "", status: t.status, priority: t.priority, customer_id: t.customer_id || "", device_id: t.device_id || "" });
+    setForm({ title: t.title, description: t.description || "", status: t.status || "Open", priority: t.priority || "Medium", customer_id: t.customer_id || "", device_id: t.device_id || "" });
     setEditing(t.id);
     setActionError(null);
     setShowForm(true);
